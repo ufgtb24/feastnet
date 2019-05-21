@@ -37,14 +37,8 @@ RESULTS_PATH = FLAGS.results_path
 NUM_ITERATIONS = FLAGS.num_iterations
 NUM_INPUT_CHANNELS = FLAGS.num_input_channels
 LEARNING_RATE = FLAGS.learning_rate
-NUM_POINTS = FLAGS.num_points
-NUM_CLASSES = FLAGS.num_classes
 BATCH_SIZE = 16
-IN_CHANNELS = 3
 K = 4
-COARSEN_LEVEL=2
-channels = [32, 64, 128, 196, 256, 512]
-layer_num=len(channels)
 if not os.path.exists(RESULTS_PATH):
     os.makedirs(RESULTS_PATH)
 

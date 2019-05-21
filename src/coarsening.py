@@ -2,7 +2,7 @@ import numpy as np
 import scipy.sparse
 
 
-def coarsen(A,x, levels, self_connections=False):
+def coarsen(A,levels, self_connections=False):
     """
     Coarsen a graph, represented by its adjacency matrix A, at multiple
     levels.
@@ -16,7 +16,6 @@ def coarsen(A,x, levels, self_connections=False):
     # 根据最顶层id升序，返回自底向上的id二叉树，二叉树的结构定义了层间连接关系
     #
     perms = compute_perm(parents)
-    xnew=perm_data(x, perms[0])
     Anew=graphs[-1]
     if not self_connections:
         Anew = Anew.tocoo()
@@ -25,7 +24,7 @@ def coarsen(A,x, levels, self_connections=False):
     Anew=perm_adjacency(Anew, perms[-1])
     Anew = Anew.tocsr()
     Anew.eliminate_zeros()
-    return perms[0], Anew, xnew
+    return perms[0], Anew
 
 
 def metis(W, levels, rid=None):
@@ -71,7 +70,7 @@ def metis(W, levels, rid=None):
         weights = np.array(weights).squeeze()
 
         # PAIR THE VERTICES AND CONSTRUCT THE ROOT VECTOR
-        idx_row, idx_col, val = scipy.sparse.find(W)
+        idx_col, idx_row,  val = scipy.sparse.find(W)
         # 两个顺序：1.本层点的生成顺序，即本层id； 2.基于本层id 的 degree 顺序。二者共同决定下一层 id
         # 按照本层 id 排序。在这个基准上使用上一轮得到的degree increased rid 进行索引，
         # 先聚合 degree 小的点
@@ -322,11 +321,13 @@ def adj_to_A(adj):
     num_points, K=adj.shape
     idx=np.arange(num_points)
     idx = np.reshape(idx, [-1, 1])    # Convert to a n x 1 matrix.
-    idx = np.tile(idx, [1, K])  # Create multiple columns, each column has one number repeats repTime
-    x = np.reshape(idx, [-1]) # 0000  1111 2222 3333 4444 从0开始
-    y =np.reshape(adj, [-1]) # 3200  1300 1200 ...  e.g. 一个环  从1开始
-    v= (y!=0).astype(np.float32) # 1100 1100 1100
-    y=y-1  # 1200  0200 0100 ...  e.g. 一个环  从0开始
+    idx = np.tile(idx, [1, K])  # [pt_num,K] Create multiple columns, each column has one number repeats repTime
+    x = np.reshape(idx, [-1]) # [pt_num*K] 0000  1111 2222 3333 4444 从0开始 []
+    y =np.reshape(adj, [-1]) # [pt_num * K]
+    mask=np.where(y!=0)[0]
+    y=y[mask]-1
+    x=x[mask]
+    v=np.ones_like(mask)
     A = scipy.sparse.csr_matrix((v, (x, y)), shape=(num_points, num_points))
     # A=A.tocsr()
     # A.setdiag(0)
@@ -334,31 +335,27 @@ def adj_to_A(adj):
     return A
 
 
-def A_to_adj(num_points,K,A):
+def A_to_adj(K,A):
     '''
     in np, used after each time of coarsening when new A is created
     in coarsen, A id is begin from 0, while in conv, adj id is begin from 1
     :return: num_points, K
     '''
-    idx_row, idx_col, val = scipy.sparse.find(A)
+
+    idx_col, idx_row, val = scipy.sparse.find(A)
     pair_num=idx_row.shape[0]
     perm = np.argsort(idx_row)
     rr = idx_row[perm]
     cc = idx_col[perm]
-    adj = np.zeros([num_points,K], np.int32)
+    adj = np.zeros([A.shape[0],K], np.int32)
     cur_row = rr[0]
     cur_col=0
-    col_count=0
     for i in range(pair_num):
-        row=rr[i]
-        col=cc[i]
-        if row>cur_row:
+        if rr[i]>cur_row:
             adj[cur_row,cur_col:]=0
-            col_count+=cur_col
-            cur_row=row
+            cur_row=rr[i]
             cur_col=0
-        
-        adj[row,cur_col]=col+1
+        adj[rr[i],cur_col]=cc[i]+1
         cur_col+=1
     return adj
 

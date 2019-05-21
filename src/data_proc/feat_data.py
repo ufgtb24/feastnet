@@ -1,10 +1,13 @@
 import numpy as np
 import os
 
-tasks={'back':[2,3],'mid':[4,5],'can':[6],'front':[7,8]}
+from config import ADJ_K, LAYER_NUM, TASKS
+from src.coarsening import adj_to_A, coarsen, A_to_adj
+
 
 
 def parse_feature(feature_file,feat_cap):
+    
     
     feat_arr=np.zeros([feat_cap,4])
     
@@ -13,8 +16,9 @@ def parse_feature(feature_file,feat_cap):
         feat_list = line.split(',')
         origin=None
         for feat3d in feat_list:
-            feat3d_array=np.array(list(map(int, feat3d.split())))
-            feat_id = feat3d_array[0]  # 0 to feat_cap
+            feat3d_array=np.array(list(map(float, feat3d.split())))
+            # feat3d_array=np.array(feat3d.split())
+            feat_id = int(feat3d_array[0])  # 0 to feat_cap
             feat_coord=feat3d_array[1:]
             if feat_id==-1:
                 origin=feat_coord
@@ -22,9 +26,34 @@ def parse_feature(feature_file,feat_cap):
                 feat_arr[feat_id][0]=1
                 feat_arr[feat_id][1:]=feat_coord-origin
     return feat_arr
-def perm_index(a)
+
+def coarsen_index(adj_path,coarsen_times,coarsen_level):
+    '''
+    
+    :param adj_path:
+    :param coarsen_times:
+    :param coarsen_level:
+    :return perms: [np.array([size_to_sample_from])]*coarsen_times
+    :return adjs: [np.array([pt_num,ADJ_K])]*coarsen_times
+    
+    '''
+    adj=np.loadtxt(adj_path).astype(np.int)[:,1:]
+    perms=[]
+    adjs=[]
+    adjs.append(adj)
+    for i in range(coarsen_times):
+        print('c_time: ',i)
+        A=adj_to_A(adj)
+        perm,A=coarsen(A, coarsen_level)
+        perms.append(perm)
+        adj=A_to_adj(ADJ_K,A) # TODO 需要小 K ?
+        adjs.append(adj)
+
+    return np.array(perms),np.array(adjs)
+
+
 def save_np_data(data_path, save_path, tasks, feat_cap,
-                 pkg_capacity=2000, need_shufle=True):
+                 pkg_capacity=2000, need_shufle=False):
     """
     processes the data into standard shape
     :param data_path: path_to_image box1,box2,...,boxN with boxX: x_min,y_min,x_max,y_max,class_index
@@ -40,32 +69,39 @@ def save_np_data(data_path, save_path, tasks, feat_cap,
     # return data['image_data'], data['box_data'], data['image_shape'], [data['y_true']]
     task_x={task_name:[]for task_name in tasks.keys()}
     task_adj={task_name:[]for task_name in tasks.keys()}
+    task_perm={task_name:[]for task_name in tasks.keys()}
     task_y={task_name:[]for task_name in tasks.keys()}
-    idx_file=os.path.join(data_path,'data_idx.txt')
+    idx_file=os.path.join(data_path,'case.txt')
     with open(idx_file) as f:
-        GG = f.readlines()
+        GG = f.read().splitlines()
         img_num = len(GG)
         if need_shufle:
             np.random.shuffle(GG)
         
-        for line in (GG):
-            if line == '\n':
+        for case_name in (GG):
+            if case_name == '\n':
                 img_num -= 1
                 continue
-            if line.startswith('#'):
+            if case_name.startswith('#'):
                 img_num -= 1
                 continue
-            
-            filepath = os.path.join(data_path,line)
+            print('case_name: ', case_name)
+
+            filepath = os.path.join(data_path,case_name)
             if not os.path.exists(filepath):
                 print("not found file " + filepath)
                 continue
             for task_name,tooth_ids in  tasks.items():
                 for tooth_id in tooth_ids:
-                    tooth_path=os.path.join(filepath,'tooth_%d'%(tooth_id))
+                    print('tooth_id: ',tooth_id)
+                    tooth_path=os.path.join(filepath,'tooth%d'%(tooth_id))
                     if os.path.exists(tooth_path):
-                        task_x[task_name].append(np.loadtxt('x.txt')) #[pt_num,3]
-                        task_adj[task_name].append(np.loadtxt('adj.txt')) #[pt_num,K]
+                        task_x[task_name].append(
+                            np.loadtxt(os.path.join(tooth_path,'x.txt'))[:,1:]) #[pt_num,3]
+                        
+                        perms, adjs=coarsen_index(os.path.join(tooth_path,'adj.txt'),LAYER_NUM,2)
+                        task_adj[task_name].append(adjs) #[pt_num,K]
+                        task_perm[task_name].append(perms) #[pt_num,K]
                         #[feat_cap,4]
                         feat_arr=parse_feature(os.path.join(tooth_path,'y.txt'),feat_cap=feat_cap)
                         task_y[task_name].append(feat_arr)
@@ -77,7 +113,8 @@ def save_np_data(data_path, save_path, tasks, feat_cap,
             
         np.savez(task_path + '/data.npz',
                  x=np.array(task_x[task_name]),
-                 adj=np.array(task_y[task_name]),
+                 adj=np.array(task_adj[task_name]),
+                 perm=np.array(task_perm[task_name]),
                  y=np.array(task_y[task_name])
                  )
 
@@ -133,3 +170,11 @@ def get_training_data(root_path, load_previous=True):
                  Y=Y, Ynm=Ynm, Mask=Mask)
     
     return X, Adj, Pidx, Pedge, Y, Ynm, Mask
+
+if __name__ == '__main__':
+    data_path='F:/ProjectData/mesh_feature/tooth'
+    save_path='F:/ProjectData/mesh_feature/tooth/save_npz'
+    case_path=os.path.join(data_path,'Feature MO143Initial')
+    print(case_path)
+    print(os.path.exists(case_path))
+    save_np_data(data_path,save_path,TASKS,10)

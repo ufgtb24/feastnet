@@ -12,19 +12,15 @@ def coarsen(A,levels, self_connections=False):
     # graph: graph[i] 的 index 代表本层cluster 的 id(形成的顺序)
     # e.g.  graph[i][0,n]代表最先形成的cluster到第n个形成的cluster之间的连接
     # parents:下层id到上层id之间的映射。id是本层cluster形成的顺序
-    graphs, parents = metis(A, levels)
+    graphs, parents = metis(A, levels) # 3 graphs   2 parents
     # 根据最顶层id升序，返回自底向上的id二叉树，二叉树的结构定义了层间连接关系
-    #
-    perms = compute_perm(parents)
+    perms = compute_perm(parents)  # 3 perms
     Anew=graphs[-1]
     if not self_connections:
         Anew = Anew.tocoo()
         Anew.setdiag(0)
 
-    Anew=perm_adjacency(Anew, perms[-1])
-    Anew = Anew.tocsr()
-    Anew.eliminate_zeros()
-    return perms[0], Anew
+    return perms, Anew
 
 
 def metis(W, levels, rid=None):
@@ -50,8 +46,10 @@ def metis(W, levels, rid=None):
     N, N = W.shape
     if rid is None:
         rid = np.random.permutation(range(N))
+        # rid = np.arange(N)
     parents = []
     degree = W.sum(axis=0) - W.diagonal()
+    
     graphs = []
     graphs.append(W)
     #supernode_size = np.ones(N)
@@ -59,7 +57,7 @@ def metis(W, levels, rid=None):
     #count = 0
 
     #while N > maxsize:
-    for _ in range(levels):
+    for l in range(levels):
 
         #count += 1
 
@@ -70,7 +68,7 @@ def metis(W, levels, rid=None):
         weights = np.array(weights).squeeze()
 
         # PAIR THE VERTICES AND CONSTRUCT THE ROOT VECTOR
-        idx_col, idx_row,  val = scipy.sparse.find(W)
+        idx_row, idx_col,  val = scipy.sparse.find(W)
         # 两个顺序：1.本层点的生成顺序，即本层id； 2.基于本层id 的 degree 顺序。二者共同决定下一层 id
         # 按照本层 id 排序。在这个基准上使用上一轮得到的degree increased rid 进行索引，
         # 先聚合 degree 小的点
@@ -105,8 +103,13 @@ def metis(W, levels, rid=None):
         # scipy adds the values of the duplicate entries:  merge weights of cluster
         # W 的 index 代表new cluster 的 id(形成的优先性)
         # e.g.  W[0,n]代表最先形成的cluster到第n个形成的cluster之间的连接
+        
+        
         W = scipy.sparse.csr_matrix((nvv,(nrr,ncc)), shape=(Nnew,Nnew))
         W.eliminate_zeros() # 稀疏
+        
+        
+        
         # Add new graph to the list of all coarsened graphs
         graphs.append(W)
 
@@ -125,6 +128,7 @@ def metis(W, levels, rid=None):
         # 目的在于先解决孤立点
         rid = np.argsort(ss) #
     # graphs 比 parents 多一层
+    # graphs: finest to coarsest  包含自环,权值可以大于1，代表连接强弱
     return graphs, parents
 
 
@@ -145,11 +149,11 @@ def metis_one_level(rr,cc,vv,rid,weights):
     clustercount = 0
 
     for ii in range(nnz):
-        rowlength[count] = rowlength[count] + 1
         if rr[ii] > oldval:
             oldval = rr[ii]
             rowstart[count+1] = ii
             count = count + 1
+        rowlength[count] = rowlength[count] + 1
 
 
     for ii in range(N):
@@ -165,6 +169,9 @@ def metis_one_level(rr,cc,vv,rid,weights):
                     tval = 0.0
                 else:
                     tval = vv[rs+jj] * (1.0/weights[tid] + 1.0/weights[nid])
+                    if weights[tid]==0:
+                        print('zeros')
+                        
                 if tval > wmax:
                     wmax = tval
                     bestneighbor = nid
@@ -341,21 +348,26 @@ def A_to_adj(K,A):
     in coarsen, A id is begin from 0, while in conv, adj id is begin from 1
     :return: num_points, K
     '''
-
-    idx_col, idx_row, val = scipy.sparse.find(A)
-    pair_num=idx_row.shape[0]
-    perm = np.argsort(idx_row)
-    rr = idx_row[perm]
-    cc = idx_col[perm]
-    adj = np.zeros([A.shape[0],K], np.int32)
+    rr,cc,  val = scipy.sparse.find(A)
+    perm = np.argsort(rr)
+    rr = rr[perm]
+    cc = cc[perm]
+    N,N=A.shape
+    pair_num=rr.shape[0]
+    adj = np.zeros([N,K], np.int32)
     cur_row = rr[0]
     cur_col=0
+    # rowlength = np.zeros(N, np.int32)
+    # count=0
+    a=np.stack([rr,cc],axis=-1)
     for i in range(pair_num):
         if rr[i]>cur_row:
             adj[cur_row,cur_col:]=0
             cur_row=rr[i]
             cur_col=0
+            # count+=1
         adj[rr[i],cur_col]=cc[i]+1
+        # rowlength[count] = rowlength[count] + 1
         cur_col+=1
     return adj
 

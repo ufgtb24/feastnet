@@ -44,15 +44,15 @@ def coarsen_index(adj_path,coarsen_times,coarsen_level):
     for i in range(coarsen_times):
         print('c_time: ',i)
         A=adj_to_A(adj)
-        perm,A=coarsen(A, coarsen_level)
+        perm,A=coarsen(A, 2)
         perms.append(perm)
-        adj=A_to_adj(ADJ_K,A) # TODO 需要小 K ?
+        adj=A_to_adj(ADJ_K,A)    #TODO 需要小 K ?
         adjs.append(adj)
 
     return np.array(perms),np.array(adjs)
 
 
-def save_np_data(data_path, save_path, tasks, feat_cap,
+def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,
                  pkg_capacity=2000, need_shufle=False):
     """
     processes the data into standard shape
@@ -71,7 +71,7 @@ def save_np_data(data_path, save_path, tasks, feat_cap,
     task_adj={task_name:[]for task_name in tasks.keys()}
     task_perm={task_name:[]for task_name in tasks.keys()}
     task_y={task_name:[]for task_name in tasks.keys()}
-    idx_file=os.path.join(data_path,'case.txt')
+    idx_file=os.path.join(data_path,idx_file)
     with open(idx_file) as f:
         GG = f.read().splitlines()
         img_num = len(GG)
@@ -174,7 +174,4 @@ def get_training_data(root_path, load_previous=True):
 if __name__ == '__main__':
     data_path='F:/ProjectData/mesh_feature/tooth'
     save_path='F:/ProjectData/mesh_feature/tooth/save_npz'
-    case_path=os.path.join(data_path,'Feature MO143Initial')
-    print(case_path)
-    print(os.path.exists(case_path))
-    save_np_data(data_path,save_path,TASKS,10)
+    save_np_data(data_path,'test.txt',save_path,TASKS,10)

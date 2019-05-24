@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-from config import ADJ_K, LAYER_NUM, TASKS
+from config import ADJ_K, BLOCK_NUM, TASKS, C_LEVEL, FEAT_CAP
 from src.coarsening import adj_to_A, coarsen, A_to_adj
 
 
@@ -43,17 +43,16 @@ def coarsen_index(adj_path,coarsen_times,coarsen_level):
     adjs.append(adj)
     for i in range(coarsen_times):
         print('c_time: ',i)
-        A=adj_to_A(adj)
-        perm,A=coarsen(A, 2)
-        perms.append(perm)
-        adj=A_to_adj(ADJ_K,A)    #TODO 需要小 K ?
+        A_in=adj_to_A(adj)
+        perm_in, A_out=coarsen(A_in, coarsen_level)
+        perms.append(perm_in)
+        adj=A_to_adj(ADJ_K,A_out)    #TODO 需要小 K ?
         adjs.append(adj)
 
     return np.array(perms),np.array(adjs)
 
 
-def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,
-                 pkg_capacity=2000, need_shufle=False):
+def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=False):
     """
     processes the data into standard shape
     :param data_path: path_to_image box1,box2,...,boxN with boxX: x_min,y_min,x_max,y_max,class_index
@@ -99,7 +98,7 @@ def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,
                         task_x[task_name].append(
                             np.loadtxt(os.path.join(tooth_path,'x.txt'))[:,1:]) #[pt_num,3]
                         
-                        perms, adjs=coarsen_index(os.path.join(tooth_path,'adj.txt'),LAYER_NUM,2)
+                        perms, adjs=coarsen_index(os.path.join(tooth_path,'adj.txt'), BLOCK_NUM, C_LEVEL)
                         task_adj[task_name].append(adjs) #[pt_num,K]
                         task_perm[task_name].append(perms) #[pt_num,K]
                         #[feat_cap,4]
@@ -118,60 +117,39 @@ def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,
                  y=np.array(task_y[task_name])
                  )
 
-def get_training_data(root_path, load_previous=True):
-    load_path = root_path + '/train.npz'
-    if load_previous == True and os.path.isfile(load_path):
-        data = np.load(load_path)
-        print('Loading training data from ' + load_path)
-        return data['X'], data['Adj'], data['Pidx'], data['Pedge'], \
-               data['Y'], data['Ynm'], data['Mask']
+
+class Data_Gen():
+    def __init__(self, save_path):
+        files = os.listdir(save_path)
+        self.save_path = save_path
+        self.fileList = []
+        self.pkg_idx = 0
+        for f in files:
+            if (os.path.isfile(save_path + '/' + f)):
+                self.fileList.append(f)
     
-    sample_dir = os.listdir(root_path)
-    x_list = []
-    adj_list = []
-    p_idx_list = []
-    p_edge_list = []
-    y_list = []
-    y_nm_list = []
-    mask_list = []
-    
-    for sample in sample_dir:
-        sample_path = os.path.join(root_path, sample)
-        if os.path.isdir(sample_path):
-            x = np.loadtxt(os.path.join(sample_path, 'x.txt'))[:, 1:].astype(np.float32)
-            adj = np.loadtxt(os.path.join(sample_path, 'x_ad.txt'))[:, 1:11].astype(np.int32)
-            p_idx = np.loadtxt(os.path.join(sample_path, 'x_add_idx.txt')).astype(np.int32)
-            
-            p_adj = adj[p_idx - 1]
-            p_edge = extract_edge(p_idx, p_adj)
-            mask = build_mask(x.shape[0], p_idx)
-            
-            y_nm = np.loadtxt(os.path.join(sample_path, 'y_normal.txt')).astype(np.float32)
-            y = y_nm[:, :3]
-            y_nm = y_nm[:, 3:]
-            
-            x_list.append(x)
-            adj_list.append(adj)
-            p_idx_list.append(p_idx)
-            p_edge_list.append(p_edge)
-            y_list.append(y)
-            y_nm_list.append(y_nm)
-            mask_list.append(mask)
-    
-    X = np.array(x_list)
-    Adj = np.array(adj_list)
-    Pidx = np.array(p_idx_list)
-    Pedge = np.array(p_edge_list)
-    Y = np.array(y_list)
-    Ynm = np.array(y_nm_list)
-    Mask = np.array(mask_list)
-    if not load_previous:
-        np.savez(load_path, X=X, Adj=Adj, Pidx=Pidx, Pedge=Pedge,
-                 Y=Y, Ynm=Ynm, Mask=Mask)
-    
-    return X, Adj, Pidx, Pedge, Y, Ynm, Mask
+    def load_pkg(self, state):
+        print("load file: " + self.fileList[self.pkg_idx])
+        data = np.load(self.save_path + '/' + self.fileList[self.pkg_idx],allow_pickle=True)
+        state[1] = self.fileList[self.pkg_idx]
+        
+        if self.pkg_idx < len(self.fileList) - 1:
+            self.pkg_idx += 1
+        else:
+            self.pkg_idx = 0
+            state[0] = True
+        
+        return data['x'], data['adj'], data['perm'], data['y']
+
 
 if __name__ == '__main__':
     data_path='F:/ProjectData/mesh_feature/tooth'
     save_path='F:/ProjectData/mesh_feature/tooth/save_npz'
-    save_np_data(data_path,'test.txt',save_path,TASKS,10)
+    # save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)
+    
+    data_fen=Data_Gen('F:/ProjectData/mesh_feature/tooth/save_npz/back')
+    state=[False,'']
+    while not state[0]:
+        x,a,p,y=data_fen.load_pkg(state)
+        print('')
+    

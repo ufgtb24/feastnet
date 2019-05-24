@@ -3,6 +3,7 @@ import tensorflow as tf
 # from src.train import  COARSEN_LEVEL
 from tensorflow.contrib import slim
 
+from config import C_LEVEL
 from src.my_batch_norm import bn_layer_top
 
 random_seed = 0
@@ -371,7 +372,7 @@ def get_model_original(x, adj, num_classes):
 COARSEN_LEVEL = 2
 
 
-def get_model(input, adjs, perms,is_training,channels,num_classes):
+def get_model(place_holders, block_CHL, feat_cap):
     '''
     
     :param net: [input_size,3]
@@ -380,19 +381,26 @@ def get_model(input, adjs, perms,is_training,channels,num_classes):
     :param num_classes:
     :return:
     '''
+    input=place_holders['input']
+    perms=place_holders['perms']
+    adjs=place_holders['adjs']
     
     def block(net,idx,ch_in,ch_out):
         net = tf.nn.relu(conv3d(net, adjs[idx], ch_in, 9))
         net = tf.nn.relu(conv3d(net, adjs[idx], ch_out, 9))
+        
+        ##### Pooling start
         net = perm_data(net, perms[idx])
-        net = tf.layers.max_pooling1d(net, pool_size=2, strides=2)
+        for _ in range(C_LEVEL):
+            net = tf.layers.max_pooling1d(net, pool_size=2, strides=2)
+        ##### Pooling end
         return net
+    
     net=input
-    for idx,(ch_in,ch_out) in enumerate(zip(channels[:-1],channels[1:])): #6
+    for idx,(ch_in,ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])): #6
         net=block(net,idx,ch_in,ch_out)
         
     net=tf.reduce_mean(net,axis=0) #[512]
-    net=slim.dropout(net,is_training=is_training)
-    y=slim.fully_connected(net,num_classes,activation_fn=None)
-
+    # net=slim.dropout(net,is_training=is_training)
+    y=slim.fully_connected(net,feat_cap*3,activation_fn=None)
     return y

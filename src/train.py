@@ -9,8 +9,10 @@ import time
 import h5py
 import argparse
 
+from config import FEAT_CAP, BLOCK_NUM, CHANNELS
 from src.coarsening import adj_to_A, coarsen, A_to_adj
 from src.data_process import get_training_data
+from src.loss_func import loss_func
 from src.model import *
 from src.utils import *
 
@@ -50,32 +52,21 @@ adj (adj_input) of size [batch_size, num_points, K] : This is a list of indices 
 										  e.g. [16,10,4] 16 batch, 10 vertice with 4 neib for each
 """
 
-def build_input(layer_num):
+def build_input(block_num):
     adjs=[]
     perms=[]
-    x_holders=[]
-    for i in range(layer_num):
+    input=tf.placeholder(tf.float32,[None,3])
+    label=tf.placeholder(tf.float32,[FEAT_CAP,4])
+    for i in range(block_num):
         adjs.append(tf.placeholder(tf.int32,[None,K]))
         perms.append(tf.placeholder(tf.int32,[None,K]))
+    return {'input':input,'label':label,'perms':perms,'adjs':adjs}
         
         
-x = tf.placeholder(tf.float32, shape=[BATCH_SIZE, NUM_POINTS, IN_CHANNELS])
-adj0 = tf.placeholder(tf.int32, shape=[BATCH_SIZE, NUM_POINTS, K])
-adj1 = tf.placeholder(tf.int32, shape=[BATCH_SIZE, NUM_POINTS, K])
-perm0 = tf.placeholder(tf.int32, shape=[None])
-
-y = tf.placeholder(tf.float32, shape=[BATCH_SIZE, NUM_POINTS, NUM_CLASSES])
-# conv2.shape:  [batch_size, input_size, out_channel]
-output = get_model(x, [adj0, adj1], [perm0], NUM_CLASSES)
-# output = get_model(x, adj0, NUM_CLASSES)
-
-batch = tf.Variable(0, trainable=False)
-
-# Standard classification loss
-# cross_entropy = tf.reduce_mean(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_conv), axis=1))
-cross_entropy = tf.reduce_mean(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=y, logits=output), axis=1))
-
-train_step = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cross_entropy, global_step=batch)
+plc=build_input(BLOCK_NUM)
+output = get_model(plc,CHANNELS, FEAT_CAP )
+loss=loss_func(output,plc['label'])
+train_step = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
 
 saver = tf.train.Saver()
 sess.run(tf.global_variables_initializer())
@@ -87,11 +78,6 @@ if ckpt and ckpt.model_checkpoint_path:
 
 # Train for the dataset
 
-# []
-x_train, adj_train, y_train = get_training_data('')
-x_valid, adj_valid, y_valid = get_training_data('')
-case_num = x_train.shape[0]
-perm = np.arange(case_num)
 
 for iter in range(NUM_ITERATIONS):
     for i in range(case_num):

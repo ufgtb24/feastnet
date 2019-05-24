@@ -12,15 +12,18 @@ def coarsen(A,levels, self_connections=False):
     # graph: graph[i] 的 index 代表本层cluster 的 id(形成的顺序)
     # e.g.  graph[i][0,n]代表最先形成的cluster到第n个形成的cluster之间的连接
     # parents:下层id到上层id之间的映射。id是本层cluster形成的顺序
+
+    
     graphs, parents = metis(A, levels) # 3 graphs   2 parents
     # 根据最顶层id升序，返回自底向上的id二叉树，二叉树的结构定义了层间连接关系
     perms = compute_perm(parents)  # 3 perms
-    Anew=graphs[-1]
+    perm_in=perms[0]
+    A_out=graphs[-1]
     if not self_connections:
-        Anew = Anew.tocoo()
-        Anew.setdiag(0)
+        A_out = A_out.tocoo()
+        A_out.setdiag(0)
 
-    return perms, Anew
+    return perm_in, A_out
 
 
 def metis(W, levels, rid=None):
@@ -46,7 +49,6 @@ def metis(W, levels, rid=None):
     N, N = W.shape
     if rid is None:
         rid = np.random.permutation(range(N))
-        # rid = np.arange(N)
     parents = []
     degree = W.sum(axis=0) - W.diagonal()
     
@@ -68,14 +70,16 @@ def metis(W, levels, rid=None):
         weights = np.array(weights).squeeze()
 
         # PAIR THE VERTICES AND CONSTRUCT THE ROOT VECTOR
-        idx_row, idx_col,  val = scipy.sparse.find(W)
+        # column-major order  row_idx  col_idx   val_idx
+        # 因为W为邻接矩阵，是对称的，所以将 col_idx作为row_idx，就变成了row-major order
+        cc, rr,  vv = scipy.sparse.find(W)
         # 两个顺序：1.本层点的生成顺序，即本层id； 2.基于本层id 的 degree 顺序。二者共同决定下一层 id
         # 按照本层 id 排序。在这个基准上使用上一轮得到的degree increased rid 进行索引，
         # 先聚合 degree 小的点
-        perm = np.argsort(idx_row)
-        rr = idx_row[perm]
-        cc = idx_col[perm]
-        vv = val[perm]
+        # perm = np.argsort(idx_row)
+        # rr = idx_row[perm]
+        # cc = idx_col[perm]
+        # vv = val[perm]
         # 为每个不孤立的点分配cluster, 一共有 len(rid) 个点，len(cluster_id)=len(rid)
         # 每个 vertix 的起点对应的 cluster id , 由该 vertix 被 cluster 的优先级
         # 决定，没啥意义，单纯的id
@@ -105,7 +109,7 @@ def metis(W, levels, rid=None):
         # e.g.  W[0,n]代表最先形成的cluster到第n个形成的cluster之间的连接
         
         
-        W = scipy.sparse.csr_matrix((nvv,(nrr,ncc)), shape=(Nnew,Nnew))
+        W = scipy.sparse.coo_matrix((nvv,(nrr,ncc)), shape=(Nnew,Nnew))
         W.eliminate_zeros() # 稀疏
         
         
@@ -154,8 +158,8 @@ def metis_one_level(rr,cc,vv,rid,weights):
             rowstart[count+1] = ii
             count = count + 1
         rowlength[count] = rowlength[count] + 1
-
-
+    
+    idx=np.where(rowlength>14)[0]
     for ii in range(N):
         tid = rid[ii]
         if not marked[tid]:
@@ -335,7 +339,7 @@ def adj_to_A(adj):
     y=y[mask]-1
     x=x[mask]
     v=np.ones_like(mask)
-    A = scipy.sparse.csr_matrix((v, (x, y)), shape=(num_points, num_points))
+    A = scipy.sparse.coo_matrix((v, (x, y)), shape=(num_points, num_points))
     # A=A.tocsr()
     # A.setdiag(0)
     A.eliminate_zeros()  # 稀疏
@@ -348,18 +352,15 @@ def A_to_adj(K,A):
     in coarsen, A id is begin from 0, while in conv, adj id is begin from 1
     :return: num_points, K
     '''
-    rr,cc,  val = scipy.sparse.find(A)
-    perm = np.argsort(rr)
-    rr = rr[perm]
-    cc = cc[perm]
+    cc,rr,  val = scipy.sparse.find(A)
+    # perm = np.argsort(rr)
+    # rr = rr[perm]
+    # cc = cc[perm]
     N,N=A.shape
     pair_num=rr.shape[0]
     adj = np.zeros([N,K], np.int32)
     cur_row = rr[0]
     cur_col=0
-    # rowlength = np.zeros(N, np.int32)
-    # count=0
-    a=np.stack([rr,cc],axis=-1)
     for i in range(pair_num):
         if rr[i]>cur_row:
             adj[cur_row,cur_col:]=0
@@ -367,7 +368,6 @@ def A_to_adj(K,A):
             cur_col=0
             # count+=1
         adj[rr[i],cur_col]=cc[i]+1
-        # rowlength[count] = rowlength[count] + 1
         cur_col+=1
     return adj
 

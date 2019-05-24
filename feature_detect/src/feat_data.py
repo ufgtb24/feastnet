@@ -1,8 +1,8 @@
 import numpy as np
 import os
 
-from config import ADJ_K, BLOCK_NUM, TASKS, C_LEVEL, FEAT_CAP
-from src.coarsening import adj_to_A, coarsen, A_to_adj
+from feature_detect.src.config import ADJ_K, BLOCK_NUM, TASKS, C_LEVEL, FEAT_CAP
+from common.coarsening import adj_to_A, coarsen, A_to_adj
 
 
 
@@ -122,6 +122,7 @@ class Data_Gen():
     def __init__(self, save_path):
         files = os.listdir(save_path)
         self.save_path = save_path
+        # npz文件名列表
         self.fileList = []
         self.pkg_idx = 0
         for f in files:
@@ -131,25 +132,27 @@ class Data_Gen():
     def load_pkg(self, state):
         print("load file: " + self.fileList[self.pkg_idx])
         data = np.load(self.save_path + '/' + self.fileList[self.pkg_idx],allow_pickle=True)
-        state[1] = self.fileList[self.pkg_idx]
+        num=data['x'].shape[0]
+        state[1] = self.fileList[self.pkg_idx] # 本次读取的 npz 文件名
         
         if self.pkg_idx < len(self.fileList) - 1:
             self.pkg_idx += 1
         else:
             self.pkg_idx = 0
-            state[0] = True
+            state[0] = True  #是否将所有所有数据读完，即一个epoch结束
         
-        return data['x'], data['adj'], data['perm'], data['y']
+        # return data['x'], data['adj'], data['perm'], data['y']
+        return data,num
 
 
 if __name__ == '__main__':
     data_path='F:/ProjectData/mesh_feature/tooth'
     save_path='F:/ProjectData/mesh_feature/tooth/save_npz'
-    # save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)
+    save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)
     
-    data_fen=Data_Gen('F:/ProjectData/mesh_feature/tooth/save_npz/back')
-    state=[False,'']
-    while not state[0]:
-        x,a,p,y=data_fen.load_pkg(state)
-        print('')
+    # data_fen=Data_Gen('F:/ProjectData/mesh_feature/tooth/save_npz/back')
+    # state=[False,'']
+    # while not state[0]:
+    #     data=data_fen.load_pkg(state)
+    #     print('')
     

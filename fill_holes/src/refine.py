@@ -2,10 +2,9 @@ import os
 from datetime import datetime
 
 import tensorflow as tf
-import numpy as np
-from src.data_process import get_training_data
-from src.loss import mesh_loss, laplace_loss, test_loss, laplace_loss_cascade, mask_output
-from src.model import get_model_fill, get_model_res
+from fill_holes.src.data_process import get_training_data
+from fill_holes.src.loss import mesh_loss, laplace_loss
+from common.model import get_model_fill
 
 BATCH_SIZE = 1
 

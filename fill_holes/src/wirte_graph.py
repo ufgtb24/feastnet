@@ -2,15 +2,14 @@
 # By Omid Alemi - Jan 2017
 # Works with TF r1.0
 import os
-import sys
 import time
 
 import tensorflow as tf
 from tensorflow.python.tools import freeze_graph
 from tensorflow.python.tools import optimize_for_inference_lib
 import numpy as np
-from src.data_process import get_training_data
-from src.model import get_model_fill
+from fill_holes.src.data_process import get_training_data
+from common.model import get_model_fill
 
 MODEL_PATH='F:/tf_projects/3D/FeaStNet-master/ckpt'
 # Freeze the graph

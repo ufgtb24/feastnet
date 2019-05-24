@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from src.model import get_patches_1
+from common.model import get_patches_1
 
 
 def get_generate(whole_output, hole_x):

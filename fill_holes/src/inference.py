@@ -1,10 +1,9 @@
-import os
 import time
 
 import tensorflow as tf
 import numpy as np
-from src.data_process import get_training_data
-from src.model import get_model_fill
+from fill_holes.src.data_process import get_training_data
+from common.model import get_model_fill
 
 data_path = 'F:/ProjectData/surface/leg/valid'
 # [ coarse_total_size,3]

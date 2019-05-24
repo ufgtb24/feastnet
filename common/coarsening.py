@@ -17,7 +17,7 @@ def coarsen(A,levels, self_connections=False):
     graphs, parents = metis(A, levels) # 3 graphs   2 parents
     # 根据最顶层id升序，返回自底向上的id二叉树，二叉树的结构定义了层间连接关系
     perms = compute_perm(parents)  # 3 perms
-    perm_in=perms[0]
+    perm_in=np.array(perms[0])
     A_out=graphs[-1]
     if not self_connections:
         A_out = A_out.tocoo()

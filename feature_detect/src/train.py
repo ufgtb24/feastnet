@@ -62,11 +62,11 @@ config.gpu_options.allow_growth = True
 
 with tf.Session(config=config)as sess:
     sess.run(tf.global_variables_initializer())
-    dir_load=None
-    # dir_load = '/20190430-1842/valid'  # where to restore the model
-    model_name = 'model.ckpt-6'
+    # dir_load=None
+    dir_load = '/20190524-1818/rutine'  # where to restore the model
+    model_name = 'model.ckpt-4300'
     need_save = True
-    save_epoch_internal=100
+    save_epoch_internal=500
     
     if dir_load is not None:
         load_checkpoints_dir = MODEL_PATH + dir_load

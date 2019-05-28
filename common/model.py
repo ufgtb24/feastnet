@@ -296,21 +296,6 @@ def get_model_fill(x, adj):
     return y_conv
 
 
-def model_cascade(x, adj):
-    x = slim.repeat(x, 7, block16, scale=0.17, adj=adj)
-    output1 = conv3d(x, adj, 3, M=9, ring=1, scope='output')
-
-
-def get_model_res(x, adj):
-    """
-    x = tf.placeholder(tf.float32, shape=[BATCH_SIZE, NUM_POINTS, IN_CHANNELS])
-    adj = tf.placeholder(tf.int32, shape=[BATCH_SIZE, NUM_POINTS, K])
-
-    0 - input(3) - LIN(16) - CONV(32) - CONV(64) - CONV(128) - LIN(1024) - Output(50)
-    """
-    x = tf.nn.relu(conv3d(x, adj, 32, M=9, ring=1, scope='conv1'))
-    
-    return y_conv, x
 
 
 def block16(net, adj, scale=1.0, scope=None, reuse=None):
@@ -369,7 +354,7 @@ def get_model_original(x, adj, num_classes):
 COARSEN_LEVEL = 2
 
 
-def get_model(plc, block_CHL, feat_cap):
+def Mesh2FC(plc, block_CHL, fc_dim):
     '''
     
     :param net: [input_size,3]
@@ -404,6 +389,5 @@ def get_model(plc, block_CHL, feat_cap):
 
     # net=slim.dropout(net,is_training=is_training)
     # [1,feat_cap*3]
-    y=slim.fully_connected(net,feat_cap*3,activation_fn=None)
-    y = tf.reshape(y, [feat_cap,3])
+    y=slim.fully_connected(net,fc_dim,activation_fn=None)
     return y

@@ -19,12 +19,46 @@ def coarsen(A,levels, self_connections=False):
     perms = compute_perm(parents)  # 3 perms
     perm_in=np.array(perms[0])
     A_out=graphs[-1]
+
     if not self_connections:
         A_out = A_out.tocoo()
         A_out.setdiag(0)
+        
+    degree = A_out.sum(axis=0) - A_out.diagonal()
+    degree = np.array(degree).squeeze()
+    id_zero = np.where(degree == 0)[0]
+    if id_zero:
+        print('zero!!!!')
+
 
     return perm_in, A_out
 
+
+def coarsen_index(adj_path, adj_len,coarsen_times, coarsen_level):
+    '''
+
+    :param adj_path:
+    :param coarsen_times:
+    :param coarsen_level:
+    :return perms: [np.array([size_to_sample_from])]*coarsen_times
+    :return adjs: [np.array([pt_num,ADJ_K])]*coarsen_times
+
+    '''
+    adj = np.loadtxt(adj_path).astype(np.int)[:, 1:]
+    perms = []
+    adjs = []
+    adjs.append(adj)
+    for i in range(coarsen_times):
+        print('c_time: ', i)
+        A_in = adj_to_A(adj)
+        
+        perm_in, A_out = coarsen(A_in, coarsen_level)
+        perms.append(perm_in)
+        adj = A_to_adj(adj_len, A_out)  # TODO 需要小 K ?
+        adjs.append(adj)
+    
+    return np.array(perms), np.array(adjs)
+ 
 
 def metis(W, levels, rid=None):
     """
@@ -48,7 +82,8 @@ def metis(W, levels, rid=None):
 
     N, N = W.shape
     if rid is None:
-        rid = np.random.permutation(range(N))
+        rid = np.arange(N)
+        # rid = np.random.permutation(range(N))
     parents = []
     degree = W.sum(axis=0) - W.diagonal()
     
@@ -68,6 +103,9 @@ def metis(W, levels, rid=None):
         weights = degree            # graclus weights [N]
         # weights = supernode_size  # other possibility
         weights = np.array(weights).squeeze()
+        id_zero=np.where(weights==0)[0]
+        if id_zero:
+            print('zero!!!!')
 
         # PAIR THE VERTICES AND CONSTRUCT THE ROOT VECTOR
         # column-major order  row_idx  col_idx   val_idx
@@ -121,6 +159,12 @@ def metis(W, levels, rid=None):
         # 但是如果该点已经是团结过好几次的了，那么应该减小它被继续团结的可能，否则会产生吸收黑洞，
         # 所以不能忽略自环
         degree = W.sum(axis=0)
+        da = np.array(degree).squeeze()
+
+        id_zero=np.where(da==0)[0]
+        if id_zero:
+            print('zero!!!!')
+
         # degree = W.sum(axis=0) - W.diagonal()
 
         # CHOOSE THE ORDER IN WHICH VERTICES WILL BE VISTED AT THE NEXT PASS

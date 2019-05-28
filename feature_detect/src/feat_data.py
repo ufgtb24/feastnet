@@ -2,8 +2,7 @@ import numpy as np
 import os
 
 from feature_detect.src.config import ADJ_K, BLOCK_NUM, TASKS, C_LEVEL, FEAT_CAP
-from common.coarsening import adj_to_A, coarsen, A_to_adj
-
+from common.coarsening import adj_to_A, coarsen, A_to_adj, coarsen_index
 
 
 def parse_feature(feature_file,feat_cap):
@@ -27,29 +26,6 @@ def parse_feature(feature_file,feat_cap):
                 feat_arr[feat_id][1:]=feat_coord-origin
     return feat_arr
 
-def coarsen_index(adj_path,coarsen_times,coarsen_level):
-    '''
-    
-    :param adj_path:
-    :param coarsen_times:
-    :param coarsen_level:
-    :return perms: [np.array([size_to_sample_from])]*coarsen_times
-    :return adjs: [np.array([pt_num,ADJ_K])]*coarsen_times
-    
-    '''
-    adj=np.loadtxt(adj_path).astype(np.int)[:,1:]
-    perms=[]
-    adjs=[]
-    adjs.append(adj)
-    for i in range(coarsen_times):
-        print('c_time: ',i)
-        A_in=adj_to_A(adj)
-        perm_in, A_out=coarsen(A_in, coarsen_level)
-        perms.append(perm_in)
-        adj=A_to_adj(ADJ_K,A_out)    #TODO 需要小 K ?
-        adjs.append(adj)
-
-    return np.array(perms),np.array(adjs)
 
 
 def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=False):
@@ -98,7 +74,7 @@ def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=Fals
                         task_x[task_name].append(
                             np.loadtxt(os.path.join(tooth_path,'x.txt'))[:,1:]) #[pt_num,3]
                         
-                        perms, adjs=coarsen_index(os.path.join(tooth_path,'adj.txt'), BLOCK_NUM, C_LEVEL)
+                        perms, adjs=coarsen_index(os.path.join(tooth_path,'adj.txt'), ADJ_K, BLOCK_NUM, C_LEVEL)
                         task_adj[task_name].append(adjs) #[pt_num,K]
                         task_perm[task_name].append(perms) #[pt_num,K]
                         #[feat_cap,4]

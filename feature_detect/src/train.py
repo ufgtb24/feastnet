@@ -3,7 +3,8 @@ from __future__ import division
 import os
 from datetime import datetime
 
-from feature_detect.src.config import FEAT_CAP, BLOCK_NUM, CHANNELS, ADJ_K, MODEL_PATH
+from common.place_holder_ops import build_plc, build_feed_dict
+from feature_detect.src.config import *
 from feature_detect.src.feat_data import Data_Gen
 from feature_detect.src.loss_func import loss_func
 from common.model import *
@@ -20,33 +21,12 @@ adj (adj_input) of size [batch_size, num_points, K] : This is a list of indices 
 										  e.g. [16,10,4] 16 batch, 10 vertice with 4 neib for each
 """
 
-def build_input(block_num):
-    adjs=[]
-    perms=[]
-    input=tf.placeholder(tf.float32,[None,3])
-    label=tf.placeholder(tf.float32,[FEAT_CAP,4])
-    for i in range(block_num):
-        adjs.append(tf.placeholder(tf.int32,[None,ADJ_K]))
-        perms.append(tf.placeholder(tf.int32,[None]))
-    return {'input':input,'label':label,'adjs':adjs,'perms':perms}
 
 
-def build_feed_dict(plc,data,iter):
-    
-    feed_dict={
-        plc['input']:data['x'][iter],
-        plc['label']:data['y'][iter],
-    }
-    
-    adjs_dict={ adj_plc:data['adj'][iter][idx] for idx,adj_plc in enumerate(plc['adjs'])}
-    perms_dict={ perm_plc:data['perm'][iter][idx] for idx,perm_plc in enumerate(plc['perms'])}
-    feed_dict.update(adjs_dict)
-    feed_dict.update(perms_dict)
-    return feed_dict
-    
+plc=build_plc(BLOCK_NUM,label_shape=[FEAT_CAP,4],adj_dim=ADJ_K)
+output = Mesh2FC(plc, CHANNELS, fc_dim=FEAT_CAP*3)
+output = tf.reshape(output, [FEAT_CAP, 3])
 
-plc=build_input(BLOCK_NUM)
-output = get_model(plc,CHANNELS, FEAT_CAP )
 loss=loss_func(output,plc['label'])
 train_step = tf.train.AdamOptimizer(1e-3).minimize(loss)
 

@@ -3,7 +3,7 @@ import scipy.sparse
 
 
 
-def coarsen(A,levels, self_connections=False):
+def coarsen(A,levels, biased):
     """
     Coarsen a graph, represented by its adjacency matrix A, at multiple
     levels.
@@ -15,15 +15,15 @@ def coarsen(A,levels, self_connections=False):
     # parents:下层id到上层id之间的映射。id是本层cluster形成的顺序
 
     
-    graphs, parents = metis(A, levels) # 3 graphs   2 parents
+    graphs, parents = metis(A, levels,biased) # 3 graphs   2 parents
     # 根据最顶层id升序，返回自底向上的id二叉树，二叉树的结构定义了层间连接关系
     perms = compute_perm(parents)  # 3 perms
     perm_in=np.array(perms[0])
     A_out=graphs[-1]
 
-    if not self_connections:
-        A_out = A_out.tocoo()
-        A_out.setdiag(0)
+    # if not self_connections:
+    #     A_out = A_out.tocoo()
+    #     A_out.setdiag(0)
         
 
 
@@ -45,10 +45,11 @@ def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
     adjs = []
     adjs.append(adj)
     for i in range(coarsen_times):
-        # print('c_time: ', i)
+        print('c_time: ', i)
         if i==0:
             # 可以兼容adj截断的状况，不会越界，但是不再是对称矩阵
             A_in = adj_to_A(adj)
+            biased=False
             # is_symm,sub=is_Symm(A_in)
             # r,c,v=scipy.sparse.find(sub)
             # rcv=np.stack([r,c,v],axis=-1)
@@ -58,17 +59,22 @@ def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
             #     print(c)
         else:
             A_in=A_out
+            biased=True
         # A_in = adj_to_A(adj)
-        perm_in, A_out = coarsen(A_in, coarsen_level)
+        perm_in, A_out = coarsen(A_in, coarsen_level,biased)
         perms.append(perm_in)
-        adj = A_to_adj(adj_len, A_out)  # TODO 需要小 K ?
+        # print(A_out.nnz)
+        A_adj=A_out.copy()
+        A_adj.setdiag(0)
+        # print(A_adj.nnz)
+        adj = A_to_adj(adj_len, A_adj)  # TODO 需要小 K ?
         adjs.append(adj)
     return np.array(perms), np.array(adjs)
  
 def is_Symm(W):
     return (abs(W - W.T) > 0).nnz==0, abs(W - W.T)
 
-def metis(W, levels, rid=None):
+def metis(W, levels, biased):
     """
     Coarsen a graph multiple times using the METIS algorithm.
 
@@ -89,9 +95,12 @@ def metis(W, levels, rid=None):
     """
 
     N, N = W.shape
-    if rid is None:
-        rid = np.arange(N)
-        # rid = np.random.permutation(range(N))
+
+    if biased:
+        ss = np.array(W.sum(axis=0)).squeeze()
+        rid = np.argsort(ss)  #
+    else:
+        rid = np.random.permutation(range(N))
     parents = []
     degree = W.sum(axis=0) - W.diagonal()
     
@@ -144,7 +153,8 @@ def metis(W, levels, rid=None):
         # cluster 的两两组合 作为新的 pair , 创建新的 邻接矩阵
         # 有层间父子id映射 claster_id，和父层的拓扑关系 W, W中 weight越大表示节点连接关系的越强，能够
         # 指导下一次cluster
-        # scipy adds the values of the duplicate entries:  merge weights of cluster
+        # scipy adds the values of the duplicate entries:  merge weights of cluster.
+        # 本操作会产生自环，合并的新节点带有自环，剩下的孤立点没有自环，下次优先合并没有自环的
         # W 的 index 代表new cluster 的 id(形成的优先性)
         # e.g.  W[0,n]代表最先形成的cluster到第n个形成的cluster之间的连接
         

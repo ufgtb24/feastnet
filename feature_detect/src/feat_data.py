@@ -2,7 +2,7 @@ import numpy as np
 import os
 
 from feature_detect.src.config import ADJ_K, BLOCK_NUM, TASKS, C_LEVEL, FEAT_CAP
-from common.coarsening import adj_to_A, coarsen, A_to_adj, coarsen_index
+from common.coarsening import adj_to_A, coarsen, A_to_adj, multi_coarsen
 
 
 def parse_feature(feature_file,feat_cap):
@@ -72,9 +72,9 @@ def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=Fals
                     tooth_path=os.path.join(filepath,'tooth%d'%(tooth_id))
                     if os.path.exists(tooth_path):
                         task_x[task_name].append(
-                            np.loadtxt(os.path.join(tooth_path,'x.txt'))[:,1:]) #[pt_num,3]
+                            np.loadtxt(os.path.join(tooth_path,'x.txt'))) #[pt_num,3]
                         
-                        perms, adjs=coarsen_index(os.path.join(tooth_path,'adj.txt'), ADJ_K, BLOCK_NUM, C_LEVEL)
+                        perms, adjs=multi_coarsen(os.path.join(tooth_path, 'adj.txt'), ADJ_K, BLOCK_NUM, C_LEVEL)
                         task_adj[task_name].append(adjs) #[pt_num,K]
                         task_perm[task_name].append(perms) #[pt_num,K]
                         #[feat_cap,4]
@@ -122,8 +122,8 @@ class Data_Gen():
 
 
 if __name__ == '__main__':
-    data_path='F:/ProjectData/mesh_feature/tooth'
-    save_path='F:/ProjectData/mesh_feature/tooth/save_npz'
+    data_path='F:/ProjectData/mesh_feature/tooth_test/tooth'
+    save_path='F:/ProjectData/mesh_feature/tooth_test/tooth/save_npz'
     save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)
     
     # data_fen=Data_Gen('F:/ProjectData/mesh_feature/tooth/save_npz/back')

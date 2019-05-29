@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow_graphics.geometry.transformation import quaternion
 
 from Direction.src.config import *
-from common.coarsening import coarsen_index
+from common.coarsening import multi_coarsen
 
 
 def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
@@ -35,7 +35,7 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
                 print("not found file " + filepath)
                 continue
             x_arr.append(np.loadtxt(os.path.join(filepath, 'x.txt')))  # [pt_num,3]
-            perms, adjs = coarsen_index(os.path.join(filepath, 'adj.txt'), ADJ_K,BLOCK_NUM, C_LEVEL)
+            perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, BLOCK_NUM, C_LEVEL)
             adj_arr.append(adjs)  # [pt_num,14]
             perms_arr.append(perms)
             

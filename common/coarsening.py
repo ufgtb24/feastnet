@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse
 
 
+
 def coarsen(A,levels, self_connections=False):
     """
     Coarsen a graph, represented by its adjacency matrix A, at multiple
@@ -24,17 +25,12 @@ def coarsen(A,levels, self_connections=False):
         A_out = A_out.tocoo()
         A_out.setdiag(0)
         
-    degree = A_out.sum(axis=0) - A_out.diagonal()
-    degree = np.array(degree).squeeze()
-    id_zero = np.where(degree == 0)[0]
-    if id_zero:
-        print('zero!!!!')
 
 
     return perm_in, A_out
 
 
-def coarsen_index(adj_path, adj_len,coarsen_times, coarsen_level):
+def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
     '''
 
     :param adj_path:
@@ -44,21 +40,33 @@ def coarsen_index(adj_path, adj_len,coarsen_times, coarsen_level):
     :return adjs: [np.array([pt_num,ADJ_K])]*coarsen_times
 
     '''
-    adj = np.loadtxt(adj_path).astype(np.int)[:, 1:]
+    adj = np.loadtxt(adj_path).astype(np.int)
     perms = []
     adjs = []
     adjs.append(adj)
     for i in range(coarsen_times):
-        print('c_time: ', i)
-        A_in = adj_to_A(adj)
-        
+        # print('c_time: ', i)
+        if i==0:
+            # 可以兼容adj截断的状况，不会越界，但是不再是对称矩阵
+            A_in = adj_to_A(adj)
+            # is_symm,sub=is_Symm(A_in)
+            # r,c,v=scipy.sparse.find(sub)
+            # rcv=np.stack([r,c,v],axis=-1)
+            # if not is_symm:
+            #     print('  not symm item ')
+            #     print(r)
+            #     print(c)
+        else:
+            A_in=A_out
+        # A_in = adj_to_A(adj)
         perm_in, A_out = coarsen(A_in, coarsen_level)
         perms.append(perm_in)
         adj = A_to_adj(adj_len, A_out)  # TODO 需要小 K ?
         adjs.append(adj)
-    
     return np.array(perms), np.array(adjs)
  
+def is_Symm(W):
+    return (abs(W - W.T) > 0).nnz==0, abs(W - W.T)
 
 def metis(W, levels, rid=None):
     """
@@ -89,11 +97,7 @@ def metis(W, levels, rid=None):
     
     graphs = []
     graphs.append(W)
-    #supernode_size = np.ones(N)
-    #nd_sz = [supernode_size]
-    #count = 0
 
-    #while N > maxsize:
     for l in range(levels):
 
         #count += 1
@@ -103,10 +107,8 @@ def metis(W, levels, rid=None):
         weights = degree            # graclus weights [N]
         # weights = supernode_size  # other possibility
         weights = np.array(weights).squeeze()
-        id_zero=np.where(weights==0)[0]
-        if id_zero:
-            print('zero!!!!')
 
+        # check=is_Symm(W)
         # PAIR THE VERTICES AND CONSTRUCT THE ROOT VECTOR
         # column-major order  row_idx  col_idx   val_idx
         # 因为W为邻接矩阵，是对称的，所以将 col_idx作为row_idx，就变成了row-major order
@@ -159,11 +161,6 @@ def metis(W, levels, rid=None):
         # 但是如果该点已经是团结过好几次的了，那么应该减小它被继续团结的可能，否则会产生吸收黑洞，
         # 所以不能忽略自环
         degree = W.sum(axis=0)
-        da = np.array(degree).squeeze()
-
-        id_zero=np.where(da==0)[0]
-        if id_zero:
-            print('zero!!!!')
 
         # degree = W.sum(axis=0) - W.diagonal()
 
@@ -195,7 +192,7 @@ def metis_one_level(rr,cc,vv,rid,weights):
     oldval = rr[0]
     count = 0
     clustercount = 0
-
+    rc=np.stack([rr,cc],axis=-1)
     for ii in range(nnz):
         if rr[ii] > oldval:
             oldval = rr[ii]
@@ -397,6 +394,7 @@ def A_to_adj(K,A):
     :return: num_points, K
     '''
     cc,rr,  val = scipy.sparse.find(A)
+    # 发现 A 不对称
     # perm = np.argsort(rr)
     # rr = rr[perm]
     # cc = cc[perm]
@@ -405,6 +403,7 @@ def A_to_adj(K,A):
     adj = np.zeros([N,K], np.int32)
     cur_row = rr[0]
     cur_col=0
+    
     for i in range(pair_num):
         if rr[i]>cur_row:
             adj[cur_row,cur_col:]=0

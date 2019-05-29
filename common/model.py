@@ -388,6 +388,6 @@ def Mesh2FC(plc, block_CHL, fc_dim):
     net = tf.expand_dims(net, axis=0)
 
     # net=slim.dropout(net,is_training=is_training)
-    # [1,feat_cap*3]
+    # [1,fc_dim]
     y=slim.fully_connected(net,fc_dim,activation_fn=None)
     return y

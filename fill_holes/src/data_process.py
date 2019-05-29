@@ -24,7 +24,7 @@ def get_training_data(root_path, load_previous=True):
     for sample in sample_dir:
         sample_path = os.path.join(root_path, sample)
         if os.path.isdir(sample_path):
-            x = np.loadtxt(os.path.join(sample_path, 'x.txt'))[:, 1:].astype(np.float32)
+            x = np.loadtxt(os.path.join(sample_path, 'x.txt')).astype(np.float32)
             adj = np.loadtxt(os.path.join(sample_path, 'x_ad.txt'))[:, 1:11].astype(np.int32)
             p_idx = np.loadtxt(os.path.join(sample_path, 'x_add_idx.txt')).astype(np.int32)
             

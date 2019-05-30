@@ -51,6 +51,7 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
 
 
 def generate_case_data(vertices, num_samples):
+    vertices=vertices.astype(np.float32)
     # random_angles.shape: (num_samples, 3)
     random_angles = np.random.uniform(-np.pi, np.pi,
                                       (num_samples, 3)).astype(np.float32)
@@ -58,19 +59,13 @@ def generate_case_data(vertices, num_samples):
     # random_quaternion.shape: (num_samples, 4)
     random_quaternion = quaternion.from_euler(random_angles)
     
-    # random_translation.shape: (num_samples, 3)
-    random_translation = np.random.uniform(-2.0, 2.0,
-                                           (num_samples, 3)).astype(np.float32)
     
     # data.shape : (num_samples, num_vertices, 3)
     data = quaternion.rotate(vertices[tf.newaxis, :, :],
                              random_quaternion[:, tf.newaxis, :]
-                             ) + random_translation[:, tf.newaxis, :]
-    
-    # target.shape : (num_samples, 4+3)
-    target = tf.concat((random_quaternion, random_translation), axis=-1)
-    
-    return np.array(data), np.array(target)
+                             )
+        
+    return np.array(data), np.array(random_quaternion)
 
 
 class Data_Gen():
@@ -84,20 +79,61 @@ class Data_Gen():
             if (os.path.isfile(save_path + '/' + f)):
                 self.fileList.append(f)
     
-    def load_pkg(self, state):
-        print("load file: " + self.fileList[self.pkg_idx])
-        data = np.load(self.save_path + '/' + self.fileList[self.pkg_idx], allow_pickle=True)
-        num = data['x'].shape[0]
-        state[1] = self.fileList[self.pkg_idx]  # 本次读取的 npz 文件名
-        
-        if self.pkg_idx < len(self.fileList) - 1:
-            self.pkg_idx += 1
+    def load_pkg(self):
+        if self.pkg_idx==len(self.fileList):
+            self.pkg_idx=0
+            return None, None, None,False
+
         else:
-            self.pkg_idx = 0
-            state[0] = True  # 是否将所有所有数据读完，即一个epoch结束
+            npz_name=self.fileList[self.pkg_idx]
+            self.pkg_idx += 1
+            data = np.load(self.save_path + '/' + npz_name, allow_pickle=True)
+            print("load file: " + npz_name)
+            num = data['x'].shape[0]
+            return data, num, npz_name,True
+
+
+class Rotate_feed():
+    def __init__(self, rot_num, data_gen):
+        self.rot_num = rot_num
+        self.data_gen = data_gen
+        self.ref_idx = 0
+        self.rot_idx = 0
+        self.load_data()
+        self.rotate_case()
+    
+    def load_data(self):
+        self.data, self.case_num, npz_name, has_more = self.data_gen.load_pkg()
+        self.ref_idx = 0
+        return has_more
+    
+    def rotate_case(self):
+        if self.ref_idx == self.case_num:
+            self.ref_idx = 0
+            if not self.load_data():
+                return False
         
-        # return data['x'], data['adj'], data['perm'], data['y']
-        return data, num
+        self.rot_vert, self.rot_quat = generate_case_data(self.data['x'][self.ref_idx], self.rot_num)
+        self.ref_idx += 1
+        return True
+    
+    def get_feed(self,plc):
+        if self.rot_idx == self.rot_num:
+            self.rot_idx = 0
+            if not self.rotate_case():
+                return None
+        
+        feed_dict = {
+            plc['input']: self.rot_vert[self.rot_idx],
+            plc['label']: self.rot_quat[self.rot_idx],
+        }
+        self.rot_idx += 1
+        
+        adjs_dict = {adj_plc: self.data['adj'][self.ref_idx][idx] for idx, adj_plc in enumerate(plc['adjs'])}
+        perms_dict = {perm_plc: self.data['perm'][self.ref_idx][idx] for idx, perm_plc in enumerate(plc['perms'])}
+        feed_dict.update(adjs_dict)
+        feed_dict.update(perms_dict)
+        return feed_dict
 
 
 if __name__=='__main__':

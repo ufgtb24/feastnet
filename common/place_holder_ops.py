@@ -21,3 +21,6 @@ def build_feed_dict(plc, data, iter):
     feed_dict.update(adjs_dict)
     feed_dict.update(perms_dict)
     return feed_dict
+
+
+

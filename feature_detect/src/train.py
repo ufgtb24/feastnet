@@ -3,10 +3,10 @@ from __future__ import division
 import os
 from datetime import datetime
 
-from common.place_holder_ops import build_plc, build_feed_dict
 from feature_detect.src.config import *
 from feature_detect.src.feat_data import Data_Gen
 from feature_detect.src.loss_func import loss_func
+from common.place_holder_ops import build_plc, build_feed_dict
 from common.model import *
 import numpy as np
 

@@ -17,10 +17,6 @@ def pose_estimation_loss(ori_vertices,y_true, y_pred):
   Returns:
     A scalar value containing the loss described in the description above.
   """
-  # y_true.shape : (batch, 7)
-  y_true_q, y_true_t = tf.split(y_true, (4, 3), axis=-1)
-  # y_pred.shape : (batch, 7)
-  y_pred_q, y_pred_t = tf.split(y_pred, (4, 3), axis=-1)
 
   # vertices.shape: (num_vertices, 3)
   # corners.shape:(num_vertices, 1, 3)
@@ -28,11 +24,11 @@ def pose_estimation_loss(ori_vertices,y_true, y_pred):
 
   # transformed_corners.shape: (num_vertices, batch, 3)
   # q and t shapes get pre-pre-padded with 1's following standard broadcast rules.
-  transformed_corners = quaternion.rotate(corners, y_pred_q) + y_pred_t
+  transformed_corners = quaternion.rotate(corners, y_pred)
 
   # recovered_corners.shape: (num_vertices, batch, 3)
-  recovered_corners = quaternion.rotate(transformed_corners - y_true_t,
-                                        quaternion.inverse(y_true_q))
+  recovered_corners = quaternion.rotate(transformed_corners ,
+                                        quaternion.inverse(y_true))
 
   # vertex_error.shape: (num_vertices, batch)
   vertex_error = tf.reduce_sum((recovered_corners - corners)**2, axis=-1)

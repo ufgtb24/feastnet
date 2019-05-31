@@ -82,7 +82,7 @@ class Data_Gen():
     def load_pkg(self):
         if self.pkg_idx==len(self.fileList):
             self.pkg_idx=0
-            return None, None, None,False
+            return None, None,False
 
         else:
             npz_name=self.fileList[self.pkg_idx]
@@ -103,13 +103,14 @@ class Rotate_feed():
     
     def load_data(self):
         self.data,  npz_name, has_more = self.data_gen.load_pkg()
-        self.case_num = self.data['x'].shape[0]
-        self.block_num = self.data['adj'].shape[1]
         self.ref_idx = 0
+        if has_more:
+            self.case_num = self.data['x'].shape[0]
+            self.block_num = self.data['adjs'].shape[1]
         return has_more
     
     def rotate_case(self):
-        if self.ref_idx == self.case_num:
+        if self.ref_idx == self.case_num-1:
             self.ref_idx = 0
             if not self.load_data():
                 return False
@@ -119,7 +120,7 @@ class Rotate_feed():
         return True
     
     def get_feed(self):
-        if self.rot_idx == self.rot_num:
+        if self.rot_idx == self.rot_num-1:
             self.rot_idx = 0
             if not self.rotate_case():
                 return None
@@ -128,8 +129,8 @@ class Rotate_feed():
         input_dict = {
             'input': self.rot_vert[self.rot_idx],
             'label': self.rot_quat[self.rot_idx],
-            'adjs':[self.data['adj'][self.ref_idx][idx] for idx in range(self.block_num)],
-            'perms':[self.data['perm'][self.ref_idx][idx] for idx in range(self.block_num-1)]
+            'adjs':[self.data['adjs'][self.ref_idx][idx] for idx in range(self.block_num)],
+            'perms':[self.data['perms'][self.ref_idx][idx] for idx in range(self.block_num-1)]
         }
         
         return input_dict

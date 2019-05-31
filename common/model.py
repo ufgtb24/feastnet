@@ -64,6 +64,7 @@ def get_weight_assigments_translation_invariance(x, adj, u, c, ring):
     # u.shape=[M, in_channels]
     
     M, in_channels = u.get_shape().as_list()
+    M, in_channels = tf.shape()
     # [N, K, ch]
     K, patches = get_patches(x, adj, ring)
     # [ N, ch, 1]
@@ -106,7 +107,7 @@ def get_patches_1(x, adj):
 
 
 def get_patches(x, adj, ring_num):
-    K = adj.get_shape()[1]
+    K = tf.shape(adj)[1]
     if ring_num == 1:
         return K, get_patches_1(x, adj)
     elif ring_num == 2:
@@ -155,7 +156,8 @@ def conv3d(x, adj, out_channels, M, ring=1,
     if translation_invariance == True:
         with tf.variable_scope(scope):
             print("Translation-invariant\n")
-            in_channels = x.get_shape().as_list()[1]
+            # in_channels = x.get_shape().as_list()[1]
+            in_channels=tf.shape(x)[1]
             W = weight_variable([M, out_channels, in_channels])  # 卷积核参数
             b = bias_variable([out_channels])
             u = assignment_variable([M, in_channels])
@@ -354,7 +356,7 @@ def get_model_original(x, adj, num_classes):
 COARSEN_LEVEL = 2
 
 
-def Mesh2FC(plc, block_CHL, fc_dim):
+def Mesh2FC(feeds, block_CHL, fc_dim):
     '''
     
     :param net: [input_size,3]
@@ -363,9 +365,9 @@ def Mesh2FC(plc, block_CHL, fc_dim):
     :param num_classes:
     :return:
     '''
-    input=plc['input']
-    perms=plc['perms']
-    adjs=plc['adjs']
+    input=feeds['input']
+    perms=feeds['perms']
+    adjs=feeds['adjs']
     
     def block(net,idx,ch_in,ch_out):
         net = tf.nn.relu(conv3d(net, adjs[idx], ch_in, 9))
@@ -381,9 +383,13 @@ def Mesh2FC(plc, block_CHL, fc_dim):
         return net
     
     net=input
-    for idx,(ch_in,ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])): #6
+    for idx,(ch_in,ch_out) in enumerate(zip(block_CHL[:-2], block_CHL[1:-1])): #6
         net=block(net,idx,ch_in,ch_out)
-        
+    last_idx=len(block_CHL)-1
+
+    net = tf.nn.relu(conv3d(net, adjs[last_idx], block_CHL[-2], 9))
+    net = tf.nn.relu(conv3d(net, adjs[last_idx], block_CHL[-1], 9))
+
     net=tf.reduce_mean(net,axis=0) #[512]
     net = tf.expand_dims(net, axis=0)
 

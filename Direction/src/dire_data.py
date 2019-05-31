@@ -36,7 +36,7 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
                 continue
             x_arr.append(np.loadtxt(os.path.join(filepath, 'x.txt')))  # [pt_num,3]
             perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, BLOCK_NUM, C_LEVEL)
-            adj_arr.append(adjs)  # [pt_num,14]
+            adj_arr.append(adjs)  # [5,pt_num,14]
             perms_arr.append(perms)
             
         save_path=os.path.join(data_path,save_dir)
@@ -89,8 +89,7 @@ class Data_Gen():
             self.pkg_idx += 1
             data = np.load(self.save_path + '/' + npz_name, allow_pickle=True)
             print("load file: " + npz_name)
-            num = data['x'].shape[0]
-            return data, num, npz_name,True
+            return data, npz_name,True
 
 
 class Rotate_feed():
@@ -103,7 +102,9 @@ class Rotate_feed():
         self.rotate_case()
     
     def load_data(self):
-        self.data, self.case_num, npz_name, has_more = self.data_gen.load_pkg()
+        self.data,  npz_name, has_more = self.data_gen.load_pkg()
+        self.case_num = self.data['x'].shape[0]
+        self.block_num = self.data['adj'].shape[1]
         self.ref_idx = 0
         return has_more
     
@@ -117,23 +118,21 @@ class Rotate_feed():
         self.ref_idx += 1
         return True
     
-    def get_feed(self,plc):
+    def get_feed(self):
         if self.rot_idx == self.rot_num:
             self.rot_idx = 0
             if not self.rotate_case():
                 return None
-        
-        feed_dict = {
-            plc['input']: self.rot_vert[self.rot_idx],
-            plc['label']: self.rot_quat[self.rot_idx],
-        }
+            
         self.rot_idx += 1
+        input_dict = {
+            'input': self.rot_vert[self.rot_idx],
+            'label': self.rot_quat[self.rot_idx],
+            'adjs':[self.data['adj'][self.ref_idx][idx] for idx in range(self.block_num)],
+            'perms':[self.data['perm'][self.ref_idx][idx] for idx in range(self.block_num-1)]
+        }
         
-        adjs_dict = {adj_plc: self.data['adj'][self.ref_idx][idx] for idx, adj_plc in enumerate(plc['adjs'])}
-        perms_dict = {perm_plc: self.data['perm'][self.ref_idx][idx] for idx, perm_plc in enumerate(plc['perms'])}
-        feed_dict.update(adjs_dict)
-        feed_dict.update(perms_dict)
-        return feed_dict
+        return input_dict
 
 
 if __name__=='__main__':

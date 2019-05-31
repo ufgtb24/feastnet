@@ -43,7 +43,7 @@ def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
     adj = np.loadtxt(adj_path).astype(np.int)
     perms = []
     adjs = []
-    adjs.append(adj)
+    adjs.append(adj) # adj 比 perm  多一个
     for i in range(coarsen_times):
         print('c_time: ', i)
         if i==0:

@@ -74,14 +74,14 @@ class Data_Gen():
         self.save_path = save_path
         # npz文件名列表
         self.fileList = []
-        self.pkg_idx = 0
+        self.pkg_idx = -1
         for f in files:
             if (os.path.isfile(save_path + '/' + f)):
                 self.fileList.append(f)
     
     def load_pkg(self):
-        if self.pkg_idx==len(self.fileList):
-            self.pkg_idx=0
+        if self.pkg_idx==len(self.fileList)-1:
+            self.pkg_idx=-1
             return None, None,False
 
         else:
@@ -96,35 +96,41 @@ class Rotate_feed():
     def __init__(self, rot_num, data_gen):
         self.rot_num = rot_num
         self.data_gen = data_gen
-        self.ref_idx = 0
-        self.rot_idx = 0
-        self.load_data()
-        self.rotate_case()
+        self.ref_idx = -1
+        self.rot_idx = -1
+        # self.load_data()
+        # self.rotate_case()
     
     def load_data(self):
         self.data,  npz_name, has_more = self.data_gen.load_pkg()
-        self.ref_idx = 0
         if has_more:
             self.case_num = self.data['x'].shape[0]
             self.block_num = self.data['adjs'].shape[1]
         return has_more
     
     def rotate_case(self):
-        if self.ref_idx == self.case_num-1:
-            self.ref_idx = 0
+        if self.ref_idx == -1:
+            self.load_data()
+            
+        elif self.ref_idx == self.case_num-1:
+            self.ref_idx = -1
             if not self.load_data():
                 return False
         
-        self.rot_vert, self.rot_quat = generate_case_data(self.data['x'][self.ref_idx], self.rot_num)
         self.ref_idx += 1
+        self.rot_vert, self.rot_quat = generate_case_data(self.data['x'][self.ref_idx], self.rot_num)
         return True
     
     def get_feed(self):
-        if self.rot_idx == self.rot_num-1:
-            self.rot_idx = 0
+        if self.rot_idx==-1:
+            self.rotate_case()
+
+        elif self.rot_idx == self.rot_num-1:
+            self.rot_idx = -1
             if not self.rotate_case():
+                print('empty')
                 return None
-            
+        
         self.rot_idx += 1
         input_dict = {
             'input': self.rot_vert[self.rot_idx],
@@ -132,7 +138,7 @@ class Rotate_feed():
             'adjs':[self.data['adjs'][self.ref_idx][idx] for idx in range(self.block_num)],
             'perms':[self.data['perms'][self.ref_idx][idx] for idx in range(self.block_num-1)]
         }
-        
+
         return input_dict
 
 

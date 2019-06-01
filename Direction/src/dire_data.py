@@ -82,14 +82,12 @@ class Data_Gen():
     def load_pkg(self):
         if self.pkg_idx==len(self.fileList)-1:
             self.pkg_idx=-1
-            return None, None,False
 
-        else:
-            npz_name=self.fileList[self.pkg_idx]
-            self.pkg_idx += 1
-            data = np.load(self.save_path + '/' + npz_name, allow_pickle=True)
-            print("load file: " + npz_name)
-            return data, npz_name,True
+        self.pkg_idx += 1
+        npz_name=self.fileList[self.pkg_idx]
+        data = np.load(self.save_path + '/' + npz_name, allow_pickle=True)
+        print("load file: " + npz_name)
+        return data, npz_name
 
 
 class Rotate_feed():
@@ -98,38 +96,28 @@ class Rotate_feed():
         self.data_gen = data_gen
         self.ref_idx = -1
         self.rot_idx = -1
-        # self.load_data()
-        # self.rotate_case()
+        self.load_data()
+        self.rotate_case()
     
     def load_data(self):
-        self.data,  npz_name, has_more = self.data_gen.load_pkg()
-        if has_more:
-            self.case_num = self.data['x'].shape[0]
-            self.block_num = self.data['adjs'].shape[1]
-        return has_more
+        self.data,  npz_name = self.data_gen.load_pkg()
+        self.case_num = self.data['x'].shape[0]
+        self.block_num = self.data['adjs'].shape[1]
     
     def rotate_case(self):
-        if self.ref_idx == -1:
-            self.load_data()
-            
-        elif self.ref_idx == self.case_num-1:
+        
+        if self.ref_idx == self.case_num-1:
             self.ref_idx = -1
-            if not self.load_data():
-                return False
+            self.load_data()
         
         self.ref_idx += 1
         self.rot_vert, self.rot_quat = generate_case_data(self.data['x'][self.ref_idx], self.rot_num)
         return True
     
     def get_feed(self):
-        if self.rot_idx==-1:
-            self.rotate_case()
-
-        elif self.rot_idx == self.rot_num-1:
+        if self.rot_idx == self.rot_num-1:
             self.rot_idx = -1
-            if not self.rotate_case():
-                print('empty')
-                return None
+            self.rotate_case()
         
         self.rot_idx += 1
         input_dict = {

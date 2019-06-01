@@ -21,19 +21,20 @@ for epoch in range(epochs):
     # order = np.arange(case_num)
     # np.random.shuffle(order)
     idx=0
+    optimizer = tf.train.AdamOptimizer()
     while(True):
-        idx+=1
         print(idx)
+        idx+=1
         feed_dict = rf.get_feed()
-        if feed_dict is not None:
+        with tf.GradientTape() as tape:
             output = Mesh2FC(feed_dict, CHANNELS, fc_dim=4)
             output = tf.reshape(output, [4])
             loss = pose_estimation_loss(feed_dict['input'], feed_dict['label'], output)
             print(loss)
-        else:
-            break
-            
-        
+
+        grads = tape.gradient(loss, tf.trainable_variables())
+        optimizer.apply_gradients(zip(grads, tf.trainable_variables()),
+                                  global_step=tf.train.get_or_create_global_step())
             
 
-
+    

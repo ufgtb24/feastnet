@@ -35,7 +35,7 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
                 print("not found file " + filepath)
                 continue
             x_arr.append(np.loadtxt(os.path.join(filepath, 'x.txt')))  # [pt_num,3]
-            perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, BLOCK_NUM, C_LEVEL)
+            perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, COARSE_TIMES, C_LEVEL)
             adj_arr.append(adjs)  # [5,pt_num,14]
             perms_arr.append(perms)
             
@@ -80,14 +80,16 @@ class Data_Gen():
                 self.fileList.append(f)
     
     def load_pkg(self):
+        epoch_end=False
         if self.pkg_idx==len(self.fileList)-1:
+            epoch_end=True
             self.pkg_idx=-1
 
         self.pkg_idx += 1
         npz_name=self.fileList[self.pkg_idx]
         data = np.load(self.save_path + '/' + npz_name, allow_pickle=True)
         print("load file: " + npz_name)
-        return data, npz_name
+        return data, npz_name ,epoch_end
 
 
 class Rotate_feed():
@@ -100,26 +102,29 @@ class Rotate_feed():
         self.rotate_case()
     
     def load_data(self):
-        self.data,  npz_name = self.data_gen.load_pkg()
+        self.data,  npz_name,epoch_end = self.data_gen.load_pkg()
         self.case_num = self.data['x'].shape[0]
         self.block_num = self.data['adjs'].shape[1]
+        return epoch_end
     
     def rotate_case(self):
-        
+        epoch_end=False
         if self.ref_idx == self.case_num-1:
             self.ref_idx = -1
-            self.load_data()
+            epoch_end=self.load_data()
         
         self.ref_idx += 1
         self.rot_vert, self.rot_quat = generate_case_data(self.data['x'][self.ref_idx], self.rot_num)
-        return True
+        return epoch_end
     
     def get_feed(self):
+        epoch_end=False
         if self.rot_idx == self.rot_num-1:
             self.rot_idx = -1
-            self.rotate_case()
+            epoch_end = self.rotate_case()
         
         self.rot_idx += 1
+        
         input_dict = {
             'input': self.rot_vert[self.rot_idx],
             'label': self.rot_quat[self.rot_idx],
@@ -127,7 +132,7 @@ class Rotate_feed():
             'perms':[self.data['perms'][self.ref_idx][idx] for idx in range(self.block_num-1)]
         }
 
-        return input_dict
+        return input_dict,epoch_end
 
 
 if __name__=='__main__':

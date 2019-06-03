@@ -1,5 +1,4 @@
 import tensorflow as tf
-
 from common.custom_layer import Conv_Mesh
 
 class Block(tf.keras.layers.Layer):
@@ -9,8 +8,9 @@ class Block(tf.keras.layers.Layer):
         self.Pool_layers=[tf.keras.layers.MaxPooling1D(pool_size=2,strides=2)]*coarse_level
         super(Block, self).__init__(**kwargs)
     
-    def call(self,input,adj,perm,need_pool=True):
-        net=tf.nn.relu(self.conv1(input,adj))
+    def call(self,x,adj,perm,need_pool=True):
+        
+        net=tf.nn.relu(self.conv1(x,adj))
         net=tf.nn.relu(self.conv2(net,adj))
         if need_pool:
             net = self.perm_data(net, perm)
@@ -49,9 +49,12 @@ class DirectionModel(tf.keras.Model):
             self.Blocks.append(Block(ch_in, ch_out, coarse_level=2))
     
 
-    def call(self, input,perms,adjs, **kwargs):
+    def call(self, feed_dict):
         """Run the model."""
-        net=input
+        
+        net=feed_dict['input']
+        adjs=feed_dict['adjs']
+        perms=feed_dict['perms']
 
         for idx,block in enumerate(self.Blocks):
             if idx == self.block_num-1:

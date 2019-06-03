@@ -150,6 +150,9 @@ def get_patches_2(x, adj):
     return patches
 
 
+  
+  
+  
 def conv3d(x, adj, out_channels, M, ring=1,
            translation_invariance=True, scope=''):
     if translation_invariance == True:
@@ -367,6 +370,7 @@ def Mesh2FC(feeds, block_CHL, fc_dim):
     adjs=feeds['adjs']
     
     def block(net,idx,ch_in,ch_out):
+        
         net = tf.nn.relu(conv3d(net, adjs[idx], ch_in, 9))
         net = tf.nn.relu(conv3d(net, adjs[idx], ch_out, 9))
         

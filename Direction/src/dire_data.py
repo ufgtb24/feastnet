@@ -56,7 +56,8 @@ def generate_case_data(vertices, num_samples):
     random_angles = np.random.uniform(-np.pi, np.pi,
                                       (num_samples, 3)).astype(np.float32)
     ## debug
-    regular_angles=np.concatenate([np.arange(-np.pi, np.pi,10)[:,np.newaxis],np.zeros((10,2))]).astype(np.float32)
+    regular_angles=np.concatenate([np.linspace(-np.pi, np.pi,10)[:,np.newaxis],np.zeros((10,2))],axis=-1)\
+        .astype(np.float32)
     
     ##
     

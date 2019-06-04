@@ -31,7 +31,7 @@ class Block(tf.keras.layers.Layer):
         :return: Mnew, channel
         """
         
-        fake_node = tf.zeros([indices.shape[0] - tf.shape(input)[0], input.shape[1]], dtype=tf.float32)
+        fake_node = tf.zeros([tf.shape(indices)[0] - tf.shape(input)[0], tf.shape(input)[1]], dtype=tf.float32)
         sample_array = tf.concat([input, fake_node], axis=0)  # [Mnew,channel]
         perm_data = tf.gather(sample_array, indices)
         return perm_data

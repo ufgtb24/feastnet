@@ -8,11 +8,11 @@ class Block(tf.keras.layers.Layer):
         self.Pool_layers=[tf.keras.layers.MaxPooling1D(pool_size=2,strides=2)]*coarse_level
         super(Block, self).__init__(**kwargs)
     
-    def call(self,x,adj,perm,need_pool=True):
+    def call(self,x,adj,perm):
         
         net=tf.nn.relu(self.conv1(x,adj))
         net=tf.nn.relu(self.conv2(net,adj))
-        if need_pool:
+        if perm is not None:
             net = self.perm_data(net, perm)
             net=tf.expand_dims(net,axis=0)
             for pool in self.Pool_layers:
@@ -58,9 +58,9 @@ class DirectionModel(tf.keras.Model):
 
         for idx,block in enumerate(self.Blocks):
             if idx == self.block_num-1:
-                net = block(net,adjs[idx],perms[idx],need_pool=False)
+                net = block(net,adjs[idx],None)
             else:
-                net = block(net,adjs[idx],perms[idx],need_pool=True)
+                net = block(net,adjs[idx],perms[idx])
 
         net = tf.reduce_mean(net, axis=0)  # [512]
         net = tf.expand_dims(net, axis=0)

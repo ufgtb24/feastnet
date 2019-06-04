@@ -55,9 +55,13 @@ def generate_case_data(vertices, num_samples):
     # random_angles.shape: (num_samples, 3)
     random_angles = np.random.uniform(-np.pi, np.pi,
                                       (num_samples, 3)).astype(np.float32)
+    ## debug
+    regular_angles=np.concatenate([np.arange(-np.pi, np.pi,10)[:,np.newaxis],np.zeros((10,2))]).astype(np.float32)
+    
+    ##
     
     # random_quaternion.shape: (num_samples, 4)
-    random_quaternion = quaternion.from_euler(random_angles)
+    random_quaternion = quaternion.from_euler(regular_angles)
     
     
     # data.shape : (num_samples, num_vertices, 3)

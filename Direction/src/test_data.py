@@ -4,7 +4,7 @@ print(tf.__version__)
 print(tf.executing_eagerly())
 # tf.enable_eager_execution()
 
-data_gen = Data_Gen('/home/yu/Documents/project_data/low/npz')
+data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
 rf=Rotate_feed(10,data_gen)
 idx=0
 while(True):

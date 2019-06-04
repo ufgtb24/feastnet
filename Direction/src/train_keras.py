@@ -7,9 +7,10 @@ from common.model_keras import DirectionModel
 
 keras=tf.keras
 
-optimizer=keras.optimizers.Adam(1.e-3)
+optimizer = keras.optimizers.Adam(learning_rate=1e-5)
 model=DirectionModel(CHANNELS,fc_dim=4)
-data_gen = Data_Gen('/home/yu/Documents/project_data/low/npz')
+data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
+# data_gen = Data_Gen('/home/yu/Documents/project_data/low/npz')
 rf=Rotate_feed(10,data_gen)
 
 for epoch in range(3):
@@ -25,7 +26,6 @@ for epoch in range(3):
             print(loss)
 
         grads = tape.gradient(loss, model.trainable_variables)
-        optimizer.apply_gradients(zip(grads, model.trainable_variables),
-                                  global_step=tf.train.get_or_create_global_step())
-        if idx%10==0:
+        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+        if idx%100==0:
             print(loss)

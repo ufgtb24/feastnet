@@ -1,10 +1,6 @@
+#coding:utf-8
+
 import tensorflow as tf
-
-
-
-
-
-
 class Conv_Mesh(tf.keras.layers.Layer):
 
   def __init__(self, out_channels, M,ring=1,**kwargs):
@@ -123,11 +119,12 @@ class Conv_Mesh(tf.keras.layers.Layer):
     
   def call(self,x,adj):
     # Calculate neighbourhood size for each input - [N, neighbours]
-    adj_size = tf.count_nonzero(adj, 1)  # [N] 每个元素 是该点的邻接点数量
+    # adj_size = tf.count_nonzero(adj, 1)  # [N] 每个元素 是该点的邻接点数量
+    adj_size = tf.math.count_nonzero(adj,1)
     # deal with unconnected points: replace NaN with 0
     non_zeros = tf.not_equal(adj_size, 0)  # [N] bool  是否有孤立点
     adj_size = tf.cast(adj_size, tf.float32)
-    adj_size = tf.where(non_zeros, tf.reciprocal(adj_size), tf.zeros_like(adj_size))  # 非孤立点 删选出来
+    adj_size = tf.where(non_zeros, tf.math.reciprocal(adj_size), tf.zeros_like(adj_size))  # 非孤立点 删选出来
     # [N, 1, 1]
     adj_size = tf.reshape(adj_size, [-1, 1, 1])
     # [N, K, M] 当K index 到 0 时， M 维相等

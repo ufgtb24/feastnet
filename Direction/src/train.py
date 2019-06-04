@@ -9,7 +9,7 @@ from Direction.src.dire_data import Data_Gen, generate_case_data, Rotate_feed
 from Direction.src.loss import pose_estimation_loss
 from common.model import Mesh2FC
 
-tf.enable_eager_execution()
+# tf.enable_eager_execution()
 
 epochs=10000
 data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')

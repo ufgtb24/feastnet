@@ -21,6 +21,7 @@ def pose_estimation_loss(ori_vertices,y_true, y_pred):
   # vertices.shape: (num_vertices, 3)
   # corners.shape:(num_vertices, 1, 3)
   corners = tf.expand_dims(ori_vertices, axis=1)
+  # corners = ori_vertices
 
   # transformed_corners.shape: (num_vertices, batch, 3)
   # q and t shapes get pre-pre-padded with 1's following standard broadcast rules.

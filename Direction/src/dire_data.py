@@ -50,11 +50,12 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
                  )
 
 
-def generate_case_data(vertices, num_samples):
+def rotate(vertices, num_samples):
     vertices=vertices.astype(np.float32)
     # random_angles.shape: (num_samples, 3)
     random_angles = np.random.uniform(-np.pi, np.pi,
                                       (num_samples, 3)).astype(np.float32)
+    
     ## debug
     regular_angles=np.concatenate([np.linspace(-np.pi, np.pi,10)[:,np.newaxis],np.zeros((10,2))],axis=-1)\
         .astype(np.float32)
@@ -62,7 +63,7 @@ def generate_case_data(vertices, num_samples):
     ##
     
     # random_quaternion.shape: (num_samples, 4)
-    random_quaternion = quaternion.from_euler(regular_angles)
+    random_quaternion = quaternion.from_euler(random_angles)
     
     
     # data.shape : (num_samples, num_vertices, 3)
@@ -119,7 +120,7 @@ class Rotate_feed():
             epoch_end=self.load_data()
         
         self.ref_idx += 1
-        self.rot_vert, self.rot_quat = generate_case_data(self.data['x'][self.ref_idx], self.rot_num)
+        self.rot_vert, self.rot_quat = rotate(self.data['x'][self.ref_idx], self.rot_num)
         return epoch_end
     
     def get_feed(self):
@@ -131,8 +132,8 @@ class Rotate_feed():
         self.rot_idx += 1
         
         input_dict = {
-            'input': self.rot_vert[self.rot_idx],
-            'label': self.rot_quat[self.rot_idx],
+            'input': self.rot_vert[self.rot_idx], #[pt_num,3]
+            'label': self.rot_quat[self.rot_idx], #[4]
             'adjs':[self.data['adjs'][self.ref_idx][idx] for idx in range(self.block_num)],
             'perms':[self.data['perms'][self.ref_idx][idx] for idx in range(self.block_num-1)]
         }

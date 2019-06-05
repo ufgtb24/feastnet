@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 
 from Direction.src.config import *
-from Direction.src.dire_data import Data_Gen, generate_case_data, Rotate_feed
+from Direction.src.dire_data import Data_Gen, rotate, Rotate_feed
 from Direction.src.loss import pose_estimation_loss
 from common.model import Mesh2FC
 

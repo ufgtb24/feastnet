@@ -1,5 +1,14 @@
 import tensorflow as tf
+class CustomModel(tf.keras.models.Model):
 
-tf.enable_eager_execution()
-a=tf.constant(0,tf.float32,(5,2))
-print(tf.shape(a)[0])
+  @tf.function
+  def call(self, input_data):
+    a=tf.constant(100)
+    for i in range(5):
+      a+=1
+    return a
+
+
+model = CustomModel()
+
+print(model(tf.constant([-2, -4])))

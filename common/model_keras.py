@@ -2,12 +2,12 @@ import tensorflow as tf
 from common.custom_layer import Conv_Mesh
 
 class Block(tf.keras.layers.Layer):
-    def __init__(self, ch_in,ch_out,coarse_level, **kwargs):
+    def __init__(self, ch_in,ch_out,coarse_level):
         self.conv1=Conv_Mesh(ch_in, 9)
         self.conv2=Conv_Mesh(ch_out, 9)
         self.Pool_layers=[tf.keras.layers.MaxPooling1D(pool_size=2,strides=2)]*coarse_level
-        super(Block, self).__init__(**kwargs)
-    
+        super(Block, self).__init__()
+        
     def call(self,x,adj,perm):
         
         net=tf.nn.relu(self.conv1(x,adj))
@@ -48,7 +48,6 @@ class DirectionModel(tf.keras.Model):
         for idx, (ch_in, ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])):  # 6
             self.Blocks.append(Block(ch_in, ch_out, coarse_level=2))
     
-
     def call(self, feed_dict):
         """Run the model."""
         

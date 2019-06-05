@@ -3,6 +3,7 @@ import tensorflow as tf
 # from src.train import  COARSEN_LEVEL
 from tensorflow.contrib import slim
 
+from Direction.src.dire_data import generate_case_data
 from feature_detect.src.config import C_LEVEL
 
 random_seed = 0
@@ -351,9 +352,11 @@ def get_model_original(x, adj, num_classes):
     return y_conv
 
 
-COARSEN_LEVEL = 2
 
-
+def Rotate(input,rot_num):
+    expand_x,expand_y=generate_case_data(input,int(rot_num))
+    return  expand_x,expand_y
+    
 def Mesh2FC(plc, block_CHL, fc_dim):
     '''
     
@@ -381,9 +384,12 @@ def Mesh2FC(plc, block_CHL, fc_dim):
         return net
     
     net=input
-    for idx,(ch_in,ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])): #6
+    for idx,(ch_in,ch_out) in enumerate(zip(block_CHL[:-2], block_CHL[1:-1])): #6
         net=block(net,idx,ch_in,ch_out)
-        
+
+    net = tf.nn.relu(conv3d(net, adjs[-1], block_CHL[-2], 9))
+    net = tf.nn.relu(conv3d(net, adjs[-1], block_CHL[-1], 9))
+
     net=tf.reduce_mean(net,axis=0) #[512]
     net = tf.expand_dims(net, axis=0)
 

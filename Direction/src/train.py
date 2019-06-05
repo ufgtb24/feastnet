@@ -6,12 +6,15 @@ from tensorflow_graphics.geometry.transformation import quaternion
 import numpy as np
 
 from Direction.src.config import *
-from Direction.src.dire_data import Data_Gen, generate_case_data
+from Direction.src.dire_data import Data_Gen, generate_case_data, Rotate_feed
 from Direction.src.loss import pose_estimation_loss
-from common.model import Mesh2FC
-from common.place_holder_ops import build_plc
+from common.model import Mesh2FC, Rotate
+from common.place_holder_ops import build_plc, build_feed_dict
 
 plc=build_plc(BLOCK_NUM,label_shape=[4],adj_dim=ADJ_K)
+ori_data=tf.placeholder(tf.float32, [None, 3])
+expand_x,expand_y= Rotate(ori_data,rot_num)
+
 output = Mesh2FC(plc, CHANNELS, fc_dim=4)
 output = tf.reshape(output, [4])
 loss = pose_estimation_loss(plc['input'],plc['label'],output)
@@ -47,27 +50,33 @@ with tf.Session(config=config)as sess:
         writer = tf.summary.FileWriter(ckpt_dir, sess.graph)
     
     epochs = 10000
-    data_gen = Data_Gen('F:/ProjectData/mesh_feature/tooth/save_npz/back')
-    data, case_num = data_gen.load_pkg(state)
-    
+    data_gen = Data_Gen('/home/yu/Documents/project_data/low/npz')
+    rf = Rotate_feed(10, data_gen)
     
     sum_train = {'loss': 0}
     for epoch in range(epochs):
         print('epoch: %d' % (epoch))
-        
-        order = np.arange(case_num)
-        np.random.shuffle(order)
-        for e, i in enumerate(order):
-            feed_dict = build_feed_dict(plc, data, i)
-            
-            loss_out, _ = sess.run([loss, train_step], feed_dict=feed_dict)
-            sum_train['loss'] = (sum_train['loss'] * e + loss_out) / (e + 1)
-            
-            # print(loss_out)
+        epoch_end=False
+        idx=0
+        while(not epoch_end):
+            data, epoch_end = rf.get_data()
+            rot_x, rot_y = sess.run([expand_x,expand_y], feed_dict={
+                ori_data:data['x']
+            })
+    
+            rot_data=data
+            for i in range(rot_num):
+                rot_data['x']=rot_x[i]
+                rot_data['y']=rot_y[i]
+                feed_dict = build_feed_dict(plc, rot_data, i)
+                loss_out, _ = sess.run([loss, train_step], feed_dict=feed_dict)
+                sum_train['loss'] = (sum_train['loss'] * idx + loss_out) / (idx + 1)
+            idx+=1
+                # print(loss_out)
         if need_save:
             if (epoch + 1) % save_epoch_internal == 0:
                 saver_rut.save(sess, ckpt_dir_rut + "/model.ckpt", global_step=epoch + 1)
         
         print('epoch train loss = : %.5f' % (sum_train['loss']))
-
-
+    
+    

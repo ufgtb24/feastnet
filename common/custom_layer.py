@@ -12,7 +12,7 @@ class Conv_Mesh(tf.keras.layers.Layer):
         super(Conv_Mesh, self).__init__()
     
     def build(self, input_shape):
-        self.in_channels = input_shape[1]
+        self.batch_size,self.pt_num,self.in_channels = input_shape
         
         # Create a trainable weight variable for this layer.
         self.W = self.add_variable(name='W',
@@ -71,15 +71,15 @@ class Conv_Mesh(tf.keras.layers.Layer):
     def get_patches_1(self, x, adj):
         '''
         获得 x 的adj patch
-        :param x:  N, C
+        :param x:  B, N, C
         :param adj:  N, K
-        :return: N,K,C
+        :return: B,N,K,C
         '''
-        num_points, in_channels = x.shape
-        zeros = tf.zeros([1, in_channels], dtype=tf.float32)
+        batch_size,num_points, in_channels = x.shape
+        zeros = tf.zeros([batch_size, 1, in_channels], dtype=tf.float32)
         # 索引为0的邻接点，会索引到 0,0
-        x = tf.concat([zeros, x], 0)  # [N+1, C]
-        patches = tf.gather(x, adj)  # [N,K,C]
+        x = tf.concat([zeros, x], 1)  # [B, N+1, C]
+        patches = tf.gather(x, adj,axis=1)  # [B,N,K,C]
         return patches
     
     def get_patches(self, x, adj, ring_num):
@@ -90,29 +90,27 @@ class Conv_Mesh(tf.keras.layers.Layer):
             return K * K, self.get_patches_2(x, adj)
     
     def get_weight_assigments(self, x, adj, u, c, ring):
-        M, in_channels = tf.shape(u)
-        # [N, K, ch]
+        # [B, N, K, ch]
         K, patches = self.get_patches(x, adj, ring)
-        # [ N, ch, 1]
-        x = tf.reshape(x, [-1, in_channels, 1])
-        # [ N, ch, K]
-        patches = tf.transpose(patches, [0, 2, 1])
-        # [N, ch, K]
+        # [ B,N, ch, 1]
+        x = tf.reshape(x, [self.batch_size,self.pt_num,self.in_channels, 1])
+        # [ B, N, ch, K]
+        patches = tf.transpose(patches, [0, 1, 3, 2])
+        # [B,N, ch, K]
         patches = tf.subtract(x, patches)  # invariance
-        # [ch, N, K]
-        patches = tf.transpose(patches, [1, 0, 2])
-        # [ch, N*K]
-        x_patches = tf.reshape(patches, [in_channels, -1])
-        #  M, N*K  = [M, ch]  x  [ch, N*K]
+        # [ch,B, N, K]
+        patches = tf.transpose(patches, [2, 0,1, 3])
+        # [ch, B*N*K]
+        x_patches = tf.reshape(patches, [self.in_channels, -1])
+        #  M, B*N*K  = [M, ch]  x  [ch, B*N*K]
         patches = tf.matmul(u, x_patches)
-        # M, N, K
-        patches = tf.reshape(patches, [M, -1, K])
-        # [K, N, M]
-        patches = tf.transpose(patches, [2, 1, 0])
-        # [K, N, M]
+        # M, B, N, K
+        patches = tf.reshape(patches, [self.M,self.batch_size,self.pt_num, K])
+        # [B, N, K, M]
+        patches = tf.transpose(patches, [1,2,3, 0])
+        # [B, N, K, M]
         patches = tf.add(patches, c)
-        # N, K, M
-        patches = tf.transpose(patches, [1, 0, 2])
+        # [B, N, K, M]
         patches = tf.nn.softmax(patches)
         return patches
     
@@ -126,36 +124,42 @@ class Conv_Mesh(tf.keras.layers.Layer):
         adj_size = tf.where(non_zeros, tf.math.reciprocal(adj_size), tf.zeros_like(adj_size))  # 非孤立点 删选出来
         # [N, 1, 1]
         adj_size = tf.reshape(adj_size, [-1, 1, 1])
-        # [N, K, M] 当K index 到 0 时， M 维相等
+        # [B, N, K, M] 当K index 到 0 时， M 维相等
         q = self.get_weight_assigments(x, adj, self.u, self.c, self.ring)
-        # [C, N]
+        # [B*N,C]
+        x=tf.reshape(x,[-1,self.in_channels])
+        # [C, B*N]
         x = tf.transpose(x, [1, 0])
+        
         # [M*O,C]
         W = tf.reshape(self.W, [self.M * self.out_channels, self.in_channels])  # 卷积核参数
-        # [M*O, N]
+        # [M*O, B*N]
         wx = tf.matmul(W, x)  # 卷积
-        # [N, M*O]
+        # [B*N, M*O]
         wx = tf.transpose(wx, [1, 0])
+        # [B,N,M*O]
+        wx=tf.reshape(wx,[self.batch_size,self.pt_num,-1])
+
         # adj中k为0的索引取到的 wx 也为0
-        # [N, K, M*O]
+        # [B, N, K, M*O]
         K, patches = self.get_patches(wx, adj, self.ring)
-        # [ N, K, M, O]
-        patches = tf.reshape(patches, [-1, K, self.M, self.out_channels])
-        # [O, N, K, M]
-        patches = tf.transpose(patches, [3, 0, 1, 2])
-        # [N, K, M]*[O, N, K, M]=[O, N, K, M] element-wise
+        # [ B,N, K, M, O]
+        patches = tf.reshape(patches, [self.batch_size, self.pt_num, K, self.M, self.out_channels])
+        # [O, B,N, K, M]
+        patches = tf.transpose(patches, [4, 0, 1, 2,3])
+        # [B, N, K, M]*[O, B,N, K, M]=[O, B,N, K, M] element-wise
         patches = tf.multiply(q, patches)
-        # [N, K, M, O]
-        patches = tf.transpose(patches, [1, 2, 3, 0])
+        # [B,N, K, M, O]
+        patches = tf.transpose(patches, [1, 2, 3, 4,0])
         # Add all the elements for all neighbours for a particular m
         # sum data in index K is zero, so need 归一化
-        patches = tf.reduce_sum(patches, axis=1)  # [ N, M, O]
-        # [N, 1, 1]*[ N, M, O]=[ N, M, O]
+        patches = tf.reduce_sum(patches, axis=2)  # [ B, N, M, O]
+        # [N, 1, 1]*[ B,N, M, O]=[ B,N, M, O]
         patches = tf.multiply(adj_size, patches)  # /Ni
         # Add add elements for all m， 因为不是 reduce_mean 所以支持M中的0
-        # [ N, O]
-        patches = tf.reduce_sum(patches, axis=1)
-        # [N, O]
+        # [ B, N, O]
+        patches = tf.reduce_sum(patches, axis=2)
+        # [B, N, O]
         patches = patches + self.b
         return patches
     

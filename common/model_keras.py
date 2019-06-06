@@ -9,15 +9,23 @@ class Block(tf.keras.layers.Layer):
         super(Block, self).__init__()
         
     def call(self,x,adj,perm):
+        '''
         
+        :param x: B,N,3
+        :param adj: N,K
+        :param perm:
+        :return:
+        '''
+        #[B,N,C1]
         net=tf.nn.relu(self.conv1(x,adj))
+        #[B,N,C2]
         net=tf.nn.relu(self.conv2(net,adj))
         if perm is not None:
+            # [B,M,C]
             net = self.perm_data(net, perm)
-            net=tf.expand_dims(net,axis=0)
             for pool in self.Pool_layers:
                 net=pool(net)
-            net=tf.squeeze(net,axis=0)
+        # [B,M/(2**CL),C]
         return net
     
     def perm_data(self, input, indices):
@@ -26,14 +34,18 @@ class Block(tf.keras.layers.Layer):
         Permute data matrix, i.e. exchange node ids,
         so that binary unions form the clustering tree.
         new x can be used for pooling
-        :param input:  M,channel
-        :param indices: Mnew
-        :return: Mnew, channel
+        :param input:  B, N,channel
+        :param indices: M
+        :return: B, M(M>N), channel
         """
-        
-        fake_node = tf.zeros([tf.shape(indices)[0] - tf.shape(input)[0], tf.shape(input)[1]], dtype=tf.float32)
-        sample_array = tf.concat([input, fake_node], axis=0)  # [Mnew,channel]
-        perm_data = tf.gather(sample_array, indices)
+        #[B,M-N,C]
+        fake_node = tf.zeros(
+            [tf.shape(input)[0],tf.shape(indices)[0] - tf.shape(input)[1], tf.shape(input)[2]],
+            dtype=tf.float32)
+        #[B,M,C]
+        sample_array = tf.concat([input, fake_node], axis=1)
+        #[B,M,C]
+        perm_data = tf.gather(sample_array, indices,axis=1)
         return perm_data
     
 
@@ -47,24 +59,26 @@ class DirectionModel(tf.keras.Model):
         
         for idx, (ch_in, ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])):  # 6
             self.Blocks.append(Block(ch_in, ch_out, coarse_level=2))
-    
+
     def call(self, feed_dict):
         """Run the model."""
         
+        # [B,N_INPUT,C]
         net=feed_dict['input']
         adjs=feed_dict['adjs']
         perms=feed_dict['perms']
 
         for idx,block in enumerate(self.Blocks):
             if idx == self.block_num-1:
+                # [B,N_FINAL,C_FINAL]
                 net = block(net,adjs[idx],None)
             else:
+                # [B,N_INNER,C_INNER]
                 net = block(net,adjs[idx],perms[idx])
-
-        net = tf.reduce_mean(net, axis=0)  # [512]
-        net = tf.expand_dims(net, axis=0)
+        # [B,C_FINAL]
+        net = tf.reduce_mean(net, axis=0)
+        # [B,OUTPUT_DIM]
         net=self.FC_output(net)
-
         return net
 
 

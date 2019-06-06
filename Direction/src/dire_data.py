@@ -57,8 +57,8 @@ def rotate(vertices, num_samples):
                                       (num_samples, 3)).astype(np.float32)
     
     ## debug
-    regular_angles=np.concatenate([np.linspace(-np.pi, np.pi,10)[:,np.newaxis],np.zeros((10,2))],axis=-1)\
-        .astype(np.float32)
+    regular_angles=np.concatenate([np.linspace(-np.pi, np.pi,num_samples)[:,np.newaxis],
+                                   np.zeros((num_samples,2))],axis=-1).astype(np.float32)
     
     ##
     

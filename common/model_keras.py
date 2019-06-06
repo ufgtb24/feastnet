@@ -76,7 +76,7 @@ class DirectionModel(tf.keras.Model):
                 # [B,N_INNER,C_INNER]
                 net = block(net,adjs[idx],perms[idx])
         # [B,C_FINAL]
-        net = tf.reduce_mean(net, axis=0)
+        net = tf.reduce_mean(net, axis=1)
         # [B,OUTPUT_DIM]
         net=self.FC_output(net)
         return net

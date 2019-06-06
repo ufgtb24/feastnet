@@ -63,7 +63,7 @@ def rotate(vertices, num_samples):
     ##
     
     # random_quaternion.shape: (num_samples, 4)
-    random_quaternion = quaternion.from_euler(random_angles)
+    random_quaternion = quaternion.from_euler(regular_angles)
     
     
     # data.shape : (num_samples, num_vertices, 3)
@@ -121,27 +121,19 @@ class Rotate_feed():
         
         self.ref_idx += 1
         self.rot_vert, self.rot_quat = rotate(self.data['x'][self.ref_idx], self.rot_num)
-        return epoch_end
-    
-    def get_feed(self):
-        epoch_end=False
-        if self.rot_idx == self.rot_num-1:
-            self.rot_idx = -1
-            epoch_end = self.rotate_case()
-        
-        self.rot_idx += 1
-        
         input_dict = {
-            'input': self.rot_vert[self.rot_idx], #[pt_num,3]
-            'label': self.rot_quat[self.rot_idx], #[4]
+            'input': self.rot_vert, #[rot_num,pt_num,3]
+            'label': self.rot_quat, #[rot_num,4]
+            'ori_vertice':self.data['x'][self.ref_idx].astype(np.float32),
             'adjs':[self.data['adjs'][self.ref_idx][idx] for idx in range(self.block_num)],
             'perms':[self.data['perms'][self.ref_idx][idx] for idx in range(self.block_num-1)]
         }
 
         return input_dict,epoch_end
+    
 
 
 if __name__=='__main__':
-    data_path="F:/ProjectData/mesh_direction/2aitest/low"
+    data_path="/home/yu/Documents/project_data/low"
     save_training_data(data_path,'case_list.txt','npz')
     # dg=Data_Gen()

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from Direction.src.config import CHANNELS
+from Direction.src.config import *
 from Direction.src.dire_data import Data_Gen, Rotate_feed
 from Direction.src.loss import pose_estimation_loss
 from common.model_keras import DirectionModel
@@ -14,13 +14,13 @@ keras=tf.keras
 optimizer = tf.train.AdamOptimizer() #1.x
 # optimizer = keras.optimizers.Adam() #2.x
 
-model=DirectionModel(CHANNELS,fc_dim=4)
+model=DirectionModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
 # data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
-data_gen = Data_Gen('/home/yu/Documents/project_data/low/npz')
-rot_num=16
+data_gen = Data_Gen('/home/yu/Documents/project_data/low/npz_test')
+rot_num=8
 rf=Rotate_feed(rot_num,data_gen)
 mean_metric = keras.metrics.Mean()
-for epoch in range(1000):
+for epoch in range(100000):
     # print("epoch ",epoch)
     mean_metric.reset_states()
     epoch_end=False
@@ -34,7 +34,8 @@ for epoch in range(1000):
         grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
         mean_metric.update_state(loss)
-    print('inner loss:%f'%loss)
-    print("epoch %d  : %f"%(epoch,mean_metric.result().numpy()))
-    model.save_weights('/home/yu/PycharmProjects/feastnet/Direction/data/',
-                       save_format='tf')
+        
+    if epoch%20==0:
+        print("epoch %d  : %f"%(epoch,mean_metric.result().numpy()))
+        # model.save_weights('/home/yu/PycharmProjects/feastnet/Direction/data/',
+        #                    save_format='tf')

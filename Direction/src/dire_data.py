@@ -8,7 +8,7 @@ from Direction.src.config import *
 from common.coarsening import multi_coarsen
 
 
-def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
+def save_training_data(data_path,idx_file,save_dir,npz_name='data.npz',need_shufle=False):
     
     x_arr=[]
     adj_arr=[]
@@ -35,7 +35,8 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
                 print("not found file " + filepath)
                 continue
             x_arr.append(np.loadtxt(os.path.join(filepath, 'x.txt')))  # [pt_num,3]
-            perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, COARSE_TIMES, C_LEVEL)
+            # last block don't need pooling, only conv,so coarsen times is block_num-1
+            perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, BLOCK_NUM - 1, C_LEVEL)
             adj_arr.append(adjs)  # [5,pt_num,14]
             perms_arr.append(perms)
             
@@ -43,7 +44,7 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
         if not os.path.exists(save_path):
             os.mkdir(save_path)
 
-        np.savez(save_path + '/data.npz',
+        np.savez(os.path.join(save_path,npz_name),
                  x=np.array(x_arr),
                  adjs=np.array(adj_arr),
                  perms=np.array(perms_arr)
@@ -63,7 +64,7 @@ def rotate(vertices, num_samples):
     ##
     
     # random_quaternion.shape: (num_samples, 4)
-    random_quaternion = quaternion.from_euler(regular_angles)
+    random_quaternion = quaternion.from_euler(random_angles)
     
     
     # data.shape : (num_samples, num_vertices, 3)
@@ -94,7 +95,7 @@ class Data_Gen():
         self.pkg_idx += 1
         npz_name=self.fileList[self.pkg_idx]
         data = np.load(self.save_path + '/' + npz_name, allow_pickle=True)
-        print("load file: " + npz_name)
+        # print("load file: " + npz_name)
         return data, npz_name ,epoch_end
 
 
@@ -135,5 +136,5 @@ class Rotate_feed():
 
 if __name__=='__main__':
     data_path="/home/yu/Documents/project_data/low"
-    save_training_data(data_path,'case_list.txt','npz')
+    save_training_data(data_path,'case_test.txt','npz_test','data.npz')
     # dg=Data_Gen()

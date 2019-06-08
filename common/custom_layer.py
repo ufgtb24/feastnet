@@ -39,11 +39,11 @@ class Conv_Mesh(tf.keras.layers.Layer):
         :param adj: num_points, K
         :return:
         '''
-        num_points, in_channels = x.get_shape().as_list()
+        batch_size,num_points, in_channels = x.shape
         input_size, K = adj.shape
-        zeros = tf.zeros([1, in_channels], dtype=tf.float32)
+        zeros = tf.zeros([batch_size,1, in_channels], dtype=tf.float32)
         # 索引为0的邻接点，会索引到 0,0
-        x = tf.concat([zeros, x], 0)  # [num_points+1, in_channels]
+        x = tf.concat([zeros, x], 1)  # [num_points+1, in_channels]
         
         ############### 2-ring
         zeros_adj = tf.zeros([1, K], dtype=tf.int32)

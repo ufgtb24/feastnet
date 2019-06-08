@@ -5,7 +5,7 @@ class Block(tf.keras.layers.Layer):
     def __init__(self, ch_in,ch_out,coarse_level):
         self.conv1=Conv_Mesh(ch_in, 9)
         self.conv2=Conv_Mesh(ch_out, 9)
-        self.Pool_layers=[tf.keras.layers.MaxPooling1D(pool_size=2,strides=2)]*coarse_level
+        self.Pool_layers=[tf.keras.layers.AveragePooling1D(pool_size=2,strides=2)]*coarse_level
         super(Block, self).__init__()
         
     def call(self,x,adj,perm):
@@ -18,6 +18,7 @@ class Block(tf.keras.layers.Layer):
         '''
         #[B,N,C1]
         net=tf.nn.relu(self.conv1(x,adj))
+        # net=tf.nn.relu(self.conv3(net,adj))
         #[B,N,C2]
         net=tf.nn.relu(self.conv2(net,adj))
         if perm is not None:
@@ -51,14 +52,14 @@ class Block(tf.keras.layers.Layer):
 
 
 class DirectionModel(tf.keras.Model):
-    def __init__(self,block_CHL, fc_dim):
+    def __init__(self,block_CHL, coarse_level,fc_dim):
         super(DirectionModel, self).__init__()
         self.FC_output=tf.keras.layers.Dense(fc_dim)
         self.block_num=len(block_CHL)-1
         self.Blocks=[]
         
         for idx, (ch_in, ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])):  # 6
-            self.Blocks.append(Block(ch_in, ch_out, coarse_level=2))
+            self.Blocks.append(Block(ch_in, ch_out, coarse_level=coarse_level))
 
     def call(self, feed_dict):
         """Run the model."""

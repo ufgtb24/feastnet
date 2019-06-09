@@ -136,5 +136,5 @@ class Rotate_feed():
 
 if __name__=='__main__':
     data_path="/home/yu/Documents/project_data/low"
-    save_training_data(data_path,'case_test.txt','npz_test','data.npz')
+    save_training_data(data_path,'case_list.txt','npz','data.npz')
     # dg=Data_Gen()

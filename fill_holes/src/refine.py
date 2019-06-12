@@ -28,7 +28,7 @@ Ynm = tf.placeholder(tf.float32, shape=[None, 3])
 output = get_model_fill(X, Adj)
 
 # loss=tf.reduce_mean(tf.square(X-output))
-size = tf.shape(output)
+size = output.shape
 output = tf.where(Mask, output, X)
 
 mesh_loss, Chamfer_loss, edge_loss, normal_loss, dbg_list = mesh_loss(output, Pidx, Pedge, Ynm, Y)

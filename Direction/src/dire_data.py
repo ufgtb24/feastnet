@@ -8,7 +8,7 @@ from Direction.src.config import *
 from common.coarsening import multi_coarsen
 
 
-def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
+def save_training_data(data_path,idx_file,save_dir,npz_name='data.npz',need_shufle=False):
     
     x_arr=[]
     adj_arr=[]
@@ -35,7 +35,8 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
                 print("not found file " + filepath)
                 continue
             x_arr.append(np.loadtxt(os.path.join(filepath, 'x.txt')))  # [pt_num,3]
-            perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, BLOCK_NUM-1, C_LEVEL)
+            # last block don't need pooling, only conv,so coarsen times is block_num-1
+            perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, BLOCK_NUM - 1, C_LEVEL)
             adj_arr.append(adjs)  # [5,pt_num,14]
             perms_arr.append(perms)
             
@@ -43,26 +44,27 @@ def save_training_data(data_path,idx_file,save_dir,need_shufle=False):
         if not os.path.exists(save_path):
             os.mkdir(save_path)
 
-        np.savez(save_path + '/data.npz',
+        np.savez(os.path.join(save_path,npz_name),
                  x=np.array(x_arr),
                  adjs=np.array(adj_arr),
                  perms=np.array(perms_arr)
                  )
 
 
-def generate_case_data(vertices, num_samples):
-    vertices=tf.cast(vertices,tf.float32)
+def rotate(vertices, num_samples):
+    vertices=vertices.astype(np.float32)
     # random_angles.shape: (num_samples, 3)
-    random_angles = tf.random.uniform((num_samples, 3),-np.pi, np.pi
-                                      )
+    random_angles = np.random.uniform(-np.pi, np.pi,
+                                      (num_samples, 3)).astype(np.float32)
+    
     ## debug
-    regular_angles=tf.concat([tf.linspace(-np.pi, np.pi,10)[:,tf.newaxis],tf.zeros((10,2))],axis=-1)
+    regular_angles=np.concatenate([np.linspace(-np.pi, np.pi,num_samples)[:,np.newaxis],
+                                   np.zeros((num_samples,2))],axis=-1).astype(np.float32)
     
     ##
     
     # random_quaternion.shape: (num_samples, 4)
-    random_quaternion = quaternion.from_euler(regular_angles)
-    random_quaternion=tf.cast(random_quaternion,tf.float32)
+    random_quaternion = quaternion.from_euler(random_angles)
     
     
     # data.shape : (num_samples, num_vertices, 3)
@@ -70,7 +72,7 @@ def generate_case_data(vertices, num_samples):
                              random_quaternion[:, tf.newaxis, :]
                              )
         
-    return data, random_quaternion
+    return np.array(data), np.array(random_quaternion)
 
 
 class Data_Gen():
@@ -93,7 +95,7 @@ class Data_Gen():
         self.pkg_idx += 1
         npz_name=self.fileList[self.pkg_idx]
         data = np.load(self.save_path + '/' + npz_name, allow_pickle=True)
-        print("load file: " + npz_name)
+        # print("load file: " + npz_name)
         return data, npz_name ,epoch_end
 
 
@@ -112,47 +114,27 @@ class Rotate_feed():
         self.block_num = self.data['adjs'].shape[1]
         return epoch_end
     
-    def get_data(self):
-        epoch_end=False
-        if self.ref_idx == self.case_num-1:
-            self.ref_idx = -1
-            epoch_end=self.load_data()
-        
-        self.ref_idx += 1
-        data={'x':self.data['x'][self.ref_idx],
-                   'adjs':self.data['adjs'][self.ref_idx],
-                   'perms':self.data['perms'][self.ref_idx]}
-        return data,epoch_end
-    
     def rotate_case(self):
         epoch_end=False
         if self.ref_idx == self.case_num-1:
             self.ref_idx = -1
             epoch_end=self.load_data()
-
+        
         self.ref_idx += 1
-        self.rot_vert, self.rot_quat = generate_case_data(self.data['x'][self.ref_idx], self.rot_num)
-        return epoch_end
-    
-    def get_feed(self):
-        epoch_end=False
-        if self.rot_idx == self.rot_num-1:
-            self.rot_idx = -1
-            epoch_end = self.rotate_case()
-        
-        self.rot_idx += 1
-        
+        self.rot_vert, self.rot_quat = rotate(self.data['x'][self.ref_idx], self.rot_num)
         input_dict = {
-            'input': self.rot_vert[self.rot_idx],
-            'label': self.rot_quat[self.rot_idx],
+            'input': self.rot_vert, #[rot_num,pt_num,3]
+            'label': self.rot_quat, #[rot_num,4]
+            'ori_vertice':self.data['x'][self.ref_idx].astype(np.float32),
             'adjs':[self.data['adjs'][self.ref_idx][idx] for idx in range(self.block_num)],
             'perms':[self.data['perms'][self.ref_idx][idx] for idx in range(self.block_num-1)]
         }
 
         return input_dict,epoch_end
+    
 
 
 if __name__=='__main__':
-    data_path="F:/ProjectData/mesh_direction/2aitest/low"
-    save_training_data(data_path,'case_list.txt','npz')
+    data_path="/home/yu/Documents/project_data/low"
+    save_training_data(data_path,'case_list.txt','npz','data.npz')
     # dg=Data_Gen()

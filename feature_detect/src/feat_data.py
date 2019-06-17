@@ -88,8 +88,8 @@ def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=Fals
             
         np.savez(task_path + '/data.npz',
                  x=np.array(task_x[task_name]),
-                 adj=np.array(task_adj[task_name]),
-                 perm=np.array(task_perm[task_name]),
+                 adjs=np.array(task_adj[task_name]),
+                 perms=np.array(task_perm[task_name]),
                  y=np.array(task_y[task_name])
                  )
 
@@ -122,8 +122,8 @@ class Data_Gen():
 
 
 if __name__ == '__main__':
-    data_path='F:/ProjectData/mesh_feature/tooth_test/tooth'
-    save_path='F:/ProjectData/mesh_feature/tooth_test/tooth/save_npz'
+    data_path='F:/ProjectData/mesh_feature/tooth'
+    save_path='F:/ProjectData/mesh_feature/tooth/save_npz'
     save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)
     
     # data_fen=Data_Gen('F:/ProjectData/mesh_feature/tooth/save_npz/back')

@@ -37,9 +37,9 @@ def tile_repeat(n, repTime):
 
 
 def get_weight_assigments(x, adj, u, v, c):
-    batch_size, in_channels, num_points = x.shape
-    batch_size, num_points, K = tf.shape(adj)
-    M, in_channels = u.shape
+    batch_size, in_channels, num_points = x.get_shape().as_list()
+    batch_size, num_points, K = adj.get_shape().as_list()
+    M, in_channels = u.get_shape().as_list()
     # [batch_size, M, N]
     ux = tf.map_fn(lambda x: tf.matmul(u, x), x)
     vx = tf.map_fn(lambda x: tf.matmul(v, x), x)
@@ -63,7 +63,7 @@ def get_weight_assigments(x, adj, u, v, c):
 def get_weight_assigments_translation_invariance(x, adj, u, c, ring):
     # u.shape=[M, in_channels]
     
-    M, in_channels = tf.shape(u)
+    M, in_channels = u.get_shape().as_list()
     # [N, K, ch]
     K, patches = get_patches(x, adj, ring)
     # [ N, ch, 1]
@@ -121,7 +121,7 @@ def get_patches_2(x, adj):
     :return:
     '''
     num_points, in_channels = x.get_shape().as_list()
-    input_size, K = adj.shape
+    input_size, K = adj.get_shape().as_list()
     zeros = tf.zeros([1, in_channels], dtype=tf.float32)
     # 索引为0的邻接点，会索引到 0,0
     x = tf.concat([zeros, x], 0)  # [num_points+1, in_channels]
@@ -143,22 +143,19 @@ def get_patches_2(x, adj):
     
     # [num_points,K2] adj_2 need to save in numpy
     adj_2 = tf.map_fn(lambda x: cut_nodes(x[0], x[1]),
-                      (tf.range(patches_adj.shape[0]) + 1, patches_adj),
+                      (tf.range(tf.shape(patches_adj)[0]) + 1, patches_adj),
                       dtype=tf.int32)
     patches = tf.gather(x, adj_2)  # [num_points,K2,in_channels]
     
     return patches
 
 
-  
-  
-  
 def conv3d(x, adj, out_channels, M, ring=1,
            translation_invariance=True, scope=''):
     if translation_invariance == True:
         with tf.variable_scope(scope):
-            in_channels = x.shape[1]
-            # in_channels=tf.shape(x)[1]
+            print("Translation-invariant\n")
+            in_channels = x.get_shape().as_list()[1]
             W = weight_variable([M, out_channels, in_channels])  # 卷积核参数
             b = bias_variable([out_channels])
             u = assignment_variable([M, in_channels])
@@ -206,7 +203,7 @@ def conv3d(x, adj, out_channels, M, ring=1,
             return patches
     
     else:
-        batch_size, input_size, in_channels = x.shape
+        batch_size, input_size, in_channels = x.get_shape().as_list()
         W = weight_variable([M, out_channels, in_channels])
         b = bias_variable([out_channels])
         u = assignment_variable([M, in_channels])
@@ -251,7 +248,7 @@ def conv3d(x, adj, out_channels, M, ring=1,
 def custom_lin(input, out_channels, scope='linear'):
     # 可以理解为升降维 1x1 Conv, 只对input最后一维进行 全连接
     with tf.variable_scope(scope):
-        input_size, in_channels = tf.shape(input)
+        input_size, in_channels = input.get_shape().as_list()
         W = weight_variable([in_channels, out_channels])
         b = bias_variable([out_channels])
         return tf.matmul(input, W) + b
@@ -276,7 +273,7 @@ def perm_data(input, indices):
     :return: Mnew, channel
     """
     
-    fake_node=tf.zeros([indices.shape[0]-tf.shape(input)[0],input.shape[1]],dtype=tf.float32)
+    fake_node=tf.zeros([tf.shape(indices)[0]-tf.shape(input)[0],tf.shape(input)[1]],dtype=tf.float32)
     sample_array=tf.concat([input,fake_node],axis=0) #[Mnew,channel]
     perm_data=tf.gather(sample_array,indices)
     return perm_data

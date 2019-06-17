@@ -64,7 +64,7 @@ with tf.Session(config=config)as sess:
 
     epochs = 10000
     state = [False, '']
-    data_fen = Data_Gen('F:/ProjectData/mesh_feature/tooth/save_npz/back')
+    data_fen = Data_Gen('F:/ProjectData/mesh_feature/tooth_test/tooth/save_npz/back')
     data, case_num = data_fen.load_pkg(state)
     
     sum_train = {'loss': 0}

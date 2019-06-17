@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+
 import tensorflow as tf
 
 from Direction.src.config import *
@@ -15,11 +18,34 @@ optimizer = tf.train.AdamOptimizer() #1.x
 # optimizer = keras.optimizers.Adam() #2.x
 
 model=DirectionModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
-# data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
-data_gen = Data_Gen('/home/yu/Documents/project_data/low/npz')
+data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
+# data_gen = Data_Gen('/home/yu/Documents/project_data/low/npz')
 rot_num=20
 rf=Rotate_feed(rot_num,data_gen)
 mean_metric = keras.metrics.Mean()
+
+
+# dir_load = None  # where to restore the model
+dir_load = '/20190527-1952/rutine'  # where to restore the model
+model_name = 'model.ckpt-5'
+need_save = True
+root = tf.train.Checkpoint(optimizer=optimizer,
+                           model=model,
+                           optimizer_step=tf.train.get_or_create_global_step())
+if dir_load is not None:
+    load_checkpoints_dir = MODEL_PATH + dir_load
+    var_file = os.path.join(load_checkpoints_dir, model_name)
+    root.restore(tf.train.latest_checkpoint(var_file))
+
+if need_save:
+    dir_save = datetime.now().strftime("%Y%m%d-%H%M")
+    ckpt_dir = MODEL_PATH + '/' + dir_save
+    os.makedirs(ckpt_dir)
+    ckpt_dir_val = ckpt_dir + '/valid'
+    ckpt_dir_rut = ckpt_dir + '/rutine'
+    os.makedirs(ckpt_dir_val)
+    os.makedirs(ckpt_dir_rut)
+
 for epoch in range(100000):
     # print("epoch ",epoch)
     mean_metric.reset_states()
@@ -37,5 +63,5 @@ for epoch in range(100000):
         
     if epoch%20==0:
         print("epoch %d  : %f"%(epoch,mean_metric.result().numpy()))
-        model.save_weights('/home/yu/PycharmProjects/feastnet/Direction/data/',
-                           save_format='tf')
+        if need_save:
+            root.save(os.path.join(ckpt_dir_rut,'model.ckpt'))

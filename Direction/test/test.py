@@ -1,14 +1,10 @@
-import tensorflow as tf
-# class CustomModel(tf.keras.models.Model):
-#
-#   @tf.function
-#   def call(self, input_data):
-#     a=tf.constant(100)
-#     for i in range(5):
-#       a+=1
-#     return a
-#
-#
-# model = CustomModel()
-#
-# print(model(tf.constant([-2, -4])))
+#math_test.py
+import other as oth
+#import sub_module as sm
+
+def add_func(a,b):
+	x = oth.funx2(a)+b
+	return x
+
+add_func(1,2)
+

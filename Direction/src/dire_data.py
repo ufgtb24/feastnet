@@ -8,7 +8,7 @@ from Direction.src.config import *
 from common.coarsening import multi_coarsen
 
 
-def save_training_data(data_path,idx_file,save_dir,npz_name='data.npz',need_shufle=False):
+def process_data(data_path, idx_file, save_dir=None, npz_name='data.npz', need_shufle=False):
     
     x_arr=[]
     adj_arr=[]
@@ -39,16 +39,23 @@ def save_training_data(data_path,idx_file,save_dir,npz_name='data.npz',need_shuf
             perms, adjs = multi_coarsen(os.path.join(filepath, 'adj.txt'), ADJ_K, BLOCK_NUM - 1, C_LEVEL)
             adj_arr.append(adjs)  # [5,pt_num,14]
             perms_arr.append(perms)
-            
-        save_path=os.path.join(data_path,save_dir)
-        if not os.path.exists(save_path):
-            os.mkdir(save_path)
+        
+        x=np.array(x_arr)
+        adjs = np.array(adj_arr)
+        perms = np.array(perms_arr)
 
-        np.savez(os.path.join(save_path,npz_name),
-                 x=np.array(x_arr),
-                 adjs=np.array(adj_arr),
-                 perms=np.array(perms_arr)
-                 )
+        if save_dir is not None:
+            save_path=os.path.join(data_path,save_dir)
+            if not os.path.exists(save_path):
+                os.mkdir(save_path)
+    
+            np.savez(os.path.join(save_path,npz_name),
+                     x=x,
+                     adjs=adjs,
+                     perms=perms
+                     )
+        else:
+            return x,adjs,perms
 
 
 def rotate(vertices, num_samples):
@@ -135,6 +142,7 @@ class Rotate_feed():
 
 
 if __name__=='__main__':
-    data_path="/home/yu/Documents/project_data/low"
-    save_training_data(data_path,'case_list.txt','npz','data.npz')
+    # data_path="/home/yu/Documents/project_data/low"
+    data_path="F:/ProjectData/mesh_direction/2aitest/low"
+    process_data(data_path, 'case_list.txt', 'npz', 'data.npz')
     # dg=Data_Gen()

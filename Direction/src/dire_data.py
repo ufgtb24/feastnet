@@ -133,8 +133,8 @@ class Rotate_feed():
             'input': self.rot_vert, #[rot_num,pt_num,3]
             'label': self.rot_quat, #[rot_num,4]
             'ori_vertice':self.data['x'][self.ref_idx].astype(np.float32),
-            'adjs':[self.data['adjs'][self.ref_idx][idx] for idx in range(self.block_num)],
-            'perms':[self.data['perms'][self.ref_idx][idx] for idx in range(self.block_num-1)]
+            'adjs':[self.data['adjs'][self.ref_idx][idx].astype(np.int32) for idx in range(self.block_num)],
+            'perms':[self.data['perms'][self.ref_idx][idx].astype(np.int32) for idx in range(self.block_num-1)]
         }
 
         return input_dict,epoch_end
@@ -144,5 +144,5 @@ class Rotate_feed():
 if __name__=='__main__':
     # data_path="/home/yu/Documents/project_data/low"
     data_path="F:/ProjectData/mesh_direction/2aitest/low"
+    # process_data(data_path, 'case_test.txt', 'npz_test', 'data.npz')
     process_data(data_path, 'case_list.txt', 'npz', 'data.npz')
-    # dg=Data_Gen()

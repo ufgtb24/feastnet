@@ -40,7 +40,10 @@ def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
     :return adjs: [np.array([pt_num,ADJ_K])]*coarsen_times
 
     '''
+    # TODO:in graph mode ,adj_len(K) matters in placeholder, but the first adj is not related to adj_len,
+    # TODO:which is only determined by input data
     adj = np.loadtxt(adj_path).astype(np.int)
+    adj=np.concatenate([adj,np.zeros([adj.shape[0],adj_len-adj.shape[1]])],axis=1)
     perms = []
     adjs = []
     adjs.append(adj) # adj 比 perm  多一个

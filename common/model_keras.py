@@ -57,12 +57,16 @@ class DirectionModel(tf.keras.Model):
         self.FC_output=tf.keras.layers.Dense(fc_dim)
         self.block_num=len(block_CHL)-1
         self.Blocks=[]
-        
+        # self.block_1,self.block_2,self.block_3
         for idx, (ch_in, ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])):  # 6
+            # exec('self.block_%d = Block(ch_in, ch_out, coarse_level=coarse_level)'%idx)
+            # exec('self.Blocks.append(self.block_%d)'%idx)
+            # this kind of sub layers can not be recorded by tf.train.checkpoint, for its lack of key
             self.Blocks.append(Block(ch_in, ch_out, coarse_level=coarse_level))
 
     def call(self, feed_dict):
-        """Run the model."""
+        """Run the model. will call build
+        """
         
         # [B,N_INPUT,C]
         net=feed_dict['input']

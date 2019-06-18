@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 def build_plc(block_num,label_shape, adj_dim):
     adjs = []
     perms = []
@@ -36,7 +37,7 @@ def build_plc_b(block_num, adj_dim):
 
 def build_feed_dict_b(plc, input,adjs,perms):
     feed_dict = {
-        plc['input']: input,
+        plc['input']: input[np.newaxis,:],
     }
     
     adjs_dict = {adj_plc: adjs[idx] for idx, adj_plc in enumerate(plc['adjs'])}

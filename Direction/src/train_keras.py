@@ -26,15 +26,14 @@ mean_metric = keras.metrics.Mean()
 
 
 dir_load = None  # where to restore the model
-# dir_load = '/20190618-1632/rutine'  # where to restore the model
-model_name = 'ckpt-240'
+# dir_load = '/20190619-1425/rutine'  # where to restore the model
+model_name = 'ckpt-1280'
 need_save = True
 
 # root = tf.train.Checkpoint(optimizer=optimizer,
 #                            model=model,
 #                            optimizer_step=tf.train.get_or_create_global_step())
 ckpt = tf.train.Checkpoint( optimizer=optimizer, model=model)
-
 if dir_load is not None:
     load_checkpoints_dir = MODEL_PATH + dir_load
     var_file = os.path.join(load_checkpoints_dir, model_name)
@@ -73,16 +72,11 @@ for epoch in range(100000):
         mean_metric.update_state(loss)
         # status.assert_consumed()
         
-        if not created:
-            saver = tf.train.Saver(model.trainable_variables + optimizer.variables())
-            saver.restore(None, "../ckpt/model.ckpt")
-            created = True
 
     if epoch%40==0:
         print("epoch %d  : %f"%(epoch,mean_metric.result().numpy()))
 
         if need_save:
-            save_path = saver.save(sess=None, save_path="../ckpt/model.ckpt")
             # model.save_weights("../ckpt/ckpt")
-            # rut_manager.save(epoch)
+            rut_manager.save(epoch)
             # ckpt.save(os.path.join(ckpt_dir_rut,'model.ckpt'))

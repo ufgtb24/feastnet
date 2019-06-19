@@ -5,7 +5,14 @@ class Block(tf.keras.layers.Layer):
     def __init__(self, ch_in,ch_out,coarse_level):
         self.conv1=Conv_Mesh(ch_in, 9)
         self.conv2=Conv_Mesh(ch_out, 9)
-        self.Pool_layers=[tf.keras.layers.AveragePooling1D(pool_size=2,strides=2)]*coarse_level
+        # self.Pool_layers=[]
+        self.pool1=tf.keras.layers.AveragePooling1D(pool_size=2,strides=2)
+        self.pool2=tf.keras.layers.AveragePooling1D(pool_size=2,strides=2)
+        self.pool3=tf.keras.layers.AveragePooling1D(pool_size=2,strides=2)
+        self.Pool_layers=[self.pool1,self.pool2,self.pool3]
+        # for idx in range(coarse_level):
+        #     setattr(self, 'pooling___%d'%idx, tf.keras.layers.AveragePooling1D(pool_size=2,strides=2))
+        #     self.Pool_layers.append(getattr(self,'pooling___%d'%idx))
         super(Block, self).__init__()
         
     def call(self,x,adj,perm):
@@ -56,13 +63,19 @@ class DirectionModel(tf.keras.Model):
         super(DirectionModel, self).__init__()
         self.FC_output=tf.keras.layers.Dense(fc_dim)
         self.block_num=len(block_CHL)-1
-        self.Blocks=[]
-        # self.block_1,self.block_2,self.block_3
-        for idx, (ch_in, ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])):  # 6
-            # exec('self.block_%d = Block(ch_in, ch_out, coarse_level=coarse_level)'%idx)
-            # exec('self.Blocks.append(self.block_%d)'%idx)
-            # this kind of sub layers can not be recorded by tf.train.checkpoint, for its lack of key
-            self.Blocks.append(Block(ch_in, ch_out, coarse_level=coarse_level))
+        # self.Blocks=[]
+        ch_pair_list=list(zip(block_CHL[:-1], block_CHL[1:]))
+        self.block_1 =Block(ch_pair_list[0][0],ch_pair_list[0][1], coarse_level=coarse_level)
+        self.block_2 =Block(ch_pair_list[1][0],ch_pair_list[1][1], coarse_level=coarse_level)
+        self.block_3 =Block(ch_pair_list[2][0],ch_pair_list[2][1], coarse_level=coarse_level)
+        self.Blocks=[self.block_1,self.block_2,self.block_3]
+        
+        # for idx, (ch_in, ch_out) in enumerate(zip(block_CHL[:-1], block_CHL[1:])):  # 6
+            # setattr(self, 'block___%d'%idx, Block(ch_in, ch_out, coarse_level=coarse_level))
+            # self.Blocks.append(getattr(self,'block___%d'%idx))
+            # self.Blocks.append(Block(ch_in, ch_out, coarse_level=coarse_level))
+            
+    
 
     def call(self, feed_dict):
         """Run the model. will call build

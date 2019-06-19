@@ -1,7 +1,32 @@
+import os
+
 import tensorflow as tf
 config = tf.ConfigProto()
 config.gpu_options.allow_growth=True
 tf.enable_eager_execution(config=config) #1.x
+
+
+class MyLayer(tf.keras.layers.Layer):
+    """A simple linear model."""
+    
+    def __init__(self):
+        super(MyLayer, self).__init__()
+        # self.l1 = tf.keras.layers.Dense(5)
+    def build(self, input_shape):
+        self.w=self.add_weight(
+            name='www',
+            shape=(input_shape[-1],5),
+                               initializer='uniform',
+                               trainable=True
+                               )
+        self.b=self.add_weight(
+            name='bbb',
+            shape=(5,),
+                               initializer='uniform',
+                               trainable=True
+                               )
+    def call(self, x):
+        return tf.matmul(x,self.w)+self.b
 
 
 class Net(tf.keras.Model):
@@ -9,17 +34,15 @@ class Net(tf.keras.Model):
     
     def __init__(self):
         super(Net, self).__init__()
-        self.l1 = tf.keras.layers.Dense(5)
+        self.l2 = MyLayer()
     
     def call(self, x):
-        return self.l1(x)
-
-
+        return self.l2(x)
 def toy_dataset():
     inputs = tf.range(10.)[:, None]
     labels = inputs * 5. + tf.range(5.)[None, :]
     return tf.data.Dataset.from_tensor_slices(
-        dict(x=inputs, y=labels)).repeat(10).batch(2)
+        dict(x=inputs, y=labels)).repeat(100).batch(2)
 
 
 def train_step(net, example, optimizer):
@@ -36,9 +59,10 @@ def train_step(net, example, optimizer):
 opt = tf.train.AdamOptimizer(0.1)
 net = Net()
 ckpt = tf.train.Checkpoint(optimizer=opt, net=net)
+if not os.path.exists('./tf_ckpts'):
+    os.mkdir('./tf_ckpts')
 manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=3)
 print(tf.train.list_variables(tf.train.latest_checkpoint('./tf_ckpts')))
-
 ckpt.restore(manager.latest_checkpoint)
 if manager.latest_checkpoint:
     print("Restored from {}".format(manager.latest_checkpoint))

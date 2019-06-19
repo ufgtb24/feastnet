@@ -27,17 +27,26 @@ def build_feed_dict(plc, data, iter):
 def build_plc_b(block_num, adj_dim):
     adjs = []
     perms = []
-    input = tf.placeholder(tf.float32, [1,None, 3])
+    input_names=[]
+    input_types=[]
+    input = tf.placeholder(tf.float32, [1,None, 3],name='vertice')
+    input_names.append('vertice')
+    input_types.append(tf.float32.as_datatype_enum)
     for i in range(block_num):
-        adjs.append(tf.placeholder(tf.int32, [None, adj_dim]))
+        adjs.append(tf.placeholder(tf.int32, [None, adj_dim],name='adj_%d'%i))
+        input_names.append('adj_%d'%i)
+        input_types.append(tf.int32.as_datatype_enum)
         if i!=block_num-1:
-            perms.append(tf.placeholder(tf.int32, [None]))
-    return {'input': input, 'adjs': adjs, 'perms': perms}
+            perms.append(tf.placeholder(tf.int32, [None],name='perm_%d'%i))
+            input_names.append('perm_%d' % i)
+            input_types.append(tf.int32.as_datatype_enum)
+    plc={'vertice': input, 'adjs': adjs, 'perms': perms}
+    return plc,input_names,input_types
 
 
 def build_feed_dict_b(plc, input,adjs,perms):
     feed_dict = {
-        plc['input']: input[np.newaxis,:],
+        plc['vertice']: input[np.newaxis,:],
     }
     
     adjs_dict = {adj_plc: adjs[idx] for idx, adj_plc in enumerate(plc['adjs'])}

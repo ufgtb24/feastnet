@@ -130,7 +130,7 @@ class Rotate_feed():
         self.ref_idx += 1
         self.rot_vert, self.rot_quat = rotate(self.data['x'][self.ref_idx], self.rot_num)
         input_dict = {
-            'input': self.rot_vert, #[rot_num,pt_num,3]
+            'vertice': self.rot_vert, #[rot_num,pt_num,3]
             'label': self.rot_quat, #[rot_num,4]
             'ori_vertice':self.data['x'][self.ref_idx].astype(np.float32),
             'adjs':[self.data['adjs'][self.ref_idx][idx].astype(np.int32) for idx in range(self.block_num)],

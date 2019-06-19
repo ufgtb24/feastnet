@@ -25,34 +25,19 @@ rf=Rotate_feed(rot_num,data_gen)
 mean_metric = keras.metrics.Mean()
 
 
-dir_load = None  # where to restore the model
-# dir_load = '/20190618-1632/rutine'  # where to restore the model
-model_name = 'ckpt-240'
+# time_ckpt_dir = None  # where to restore the model
+load_time_dir = '/20190619-0839'  # where to restore the model
+model_name = '/model-80'
 need_save = True
 
-# root = tf.train.Checkpoint(optimizer=optimizer,
-#                            model=model,
-#                            optimizer_step=tf.train.get_or_create_global_step())
-ckpt = tf.train.Checkpoint( optimizer=optimizer, model=model)
-
-if dir_load is not None:
-    load_checkpoints_dir = MODEL_PATH + dir_load
-    var_file = os.path.join(load_checkpoints_dir, model_name)
-    status = ckpt.restore(tf.train.latest_checkpoint(load_checkpoints_dir))
-    print(tf.train.list_variables(tf.train.latest_checkpoint(load_checkpoints_dir)))
 
 if need_save:
     dir_save = datetime.now().strftime("%Y%m%d-%H%M")
-    ckpt_dir = MODEL_PATH + '/' + dir_save
-    os.makedirs(ckpt_dir)
-    ckpt_dir_val = ckpt_dir + '/valid'
-    ckpt_dir_rut = ckpt_dir + '/rutine'
-    os.makedirs(ckpt_dir_val)
-    os.makedirs(ckpt_dir_rut)
-    val_manager = tf.train.CheckpointManager(ckpt, ckpt_dir_val, max_to_keep=3)
-    rut_manager = tf.train.CheckpointManager(ckpt, ckpt_dir_rut, max_to_keep=3)
+    save_time_dir = '../ckpt/'+dir_save
+    # ckpt_dir = '../ckpt/' + dir_save
+    os.makedirs(save_time_dir)
 
-created=False
+var_created=False
 for epoch in range(100000):
     # print("epoch ",epoch)
     mean_metric.reset_states()
@@ -66,23 +51,20 @@ for epoch in range(100000):
 
         grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
-        # if not loaded:
-        # model.load_weights("../ckpt/ckpt")
-        # loaded=True
-        # print('loss = %f'%(loss))
         mean_metric.update_state(loss)
-        # status.assert_consumed()
         
-        if not created:
+        if not var_created:
+            # 此时才创建变量
             saver = tf.train.Saver(model.trainable_variables + optimizer.variables())
-            saver.restore(None, "../ckpt/model.ckpt")
-            created = True
+            if load_time_dir is not None:
+                saver.restore(None, '../ckpt' + load_time_dir + model_name)
+            var_created = True
 
     if epoch%40==0:
         print("epoch %d  : %f"%(epoch,mean_metric.result().numpy()))
 
         if need_save:
-            save_path = saver.save(sess=None, save_path="../ckpt/model.ckpt")
+            save_path = saver.save(sess=None, save_path=save_time_dir + '/model', global_step=epoch)
             # model.save_weights("../ckpt/ckpt")
             # rut_manager.save(epoch)
             # ckpt.save(os.path.join(ckpt_dir_rut,'model.ckpt'))

@@ -69,7 +69,7 @@ class DirectionModel(tf.keras.Model):
         """
         
         # [B,N_INPUT,C]
-        net=feed_dict['input']
+        net=feed_dict['vertice']
         adjs=feed_dict['adjs']
         perms=feed_dict['perms']
 

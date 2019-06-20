@@ -26,8 +26,9 @@ def write_pb(sess, time_dir, ckpt_file,input_names,input_types,need_optimize=Fal
     graph_io.write_graph(constant_graph, time_dir, input_path, as_text=False)
 
     # tf.train.write_graph(constant_graph, time_dir, input_path)
-    gen_frozen_graph( time_dir,ckpt_file)
-    
+    # gen_frozen_graph( time_dir,ckpt_file)
+    freeze_graph()
+
     if need_optimize:
         input_graph_def = tf.GraphDef()
         with tf.gfile.Open(os.path.join(time_dir, 'output_graph.pb'), "rb") as f:

@@ -7,15 +7,15 @@ from Direction.src.config import *
 from Direction.src.dire_data import Data_Gen, Rotate_feed
 from Direction.src.loss import pose_estimation_loss
 from common.model_keras import DirectionModel
-config = tf.ConfigProto()
-config.gpu_options.allow_growth=True
-tf.enable_eager_execution(config=config) #1.x
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth=True
+# tf.enable_eager_execution(config=config) #1.x
 # tf.debugging.set_log_device_placement(True)
 # print(tf.executing_eagerly())
 
 keras=tf.keras
-optimizer = tf.train.AdamOptimizer() #1.x
-# optimizer = keras.optimizers.Adam() #2.x
+# optimizer = tf.train.AdamOptimizer() #1.x
+optimizer = keras.optimizers.Adam() #2.x
 
 model=DirectionModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
 # data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
@@ -25,9 +25,9 @@ rf=Rotate_feed(rot_num,data_gen)
 mean_metric = keras.metrics.Mean()
 
 
-dir_load = None  # where to restore the model
-# dir_load = '/20190619-1425/rutine'  # where to restore the model
-model_name = 'ckpt-1280'
+# dir_load = None  # where to restore the model
+dir_load = '/20190620-1052/rutine'  # where to restore the model
+model_name = 'ckpt-920'
 need_save = True
 
 # root = tf.train.Checkpoint(optimizer=optimizer,
@@ -70,7 +70,7 @@ for epoch in range(100000):
         # loaded=True
         # print('loss = %f'%(loss))
         mean_metric.update_state(loss)
-        # status.assert_consumed()
+        status.assert_consumed()
         
 
     if epoch%40==0:

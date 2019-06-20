@@ -7,23 +7,25 @@ import tensorflow as tf
 
 # [B,N_INPUT,C]
 from common.place_holder_ops import *
+# tf.compat.v1.disable_eager_execution()
 
 plc=build_plc_b(BLOCK_NUM,adj_dim=ADJ_K)
 # optimizer = tf.train.AdamOptimizer() #1.x
 model=DirectionModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
-# dir_load = '/20190617-1819/rutine'  # where to restore the model
-# model_name = 'ckpt-0'
-# load_checkpoints_dir = MODEL_PATH + dir_load
-# var_file = os.path.join(load_checkpoints_dir, model_name)
-# checkpoint = tf.train.Checkpoint(optimizer=optimizer,
-#                            model=model)
-# status = checkpoint.restore(var_file)
+
+dir_load = '/20190620-1056/rutine'  # where to restore the model
+model_name = 'ckpt-120'
+load_checkpoints_dir = MODEL_PATH + dir_load
+var_file = os.path.join(load_checkpoints_dir, model_name)
+checkpoint = tf.train.Checkpoint(model=model)
+
+status = checkpoint.restore(var_file)
 # status.assert_consumed()
 
 output = model(plc)
 init = tf.global_variables_initializer()
 
-saver = tf.train.Saver(model.trainable_variables)
+# saver = tf.train.Saver(model.trainable_variables)
 
 data_path = "F:/ProjectData/mesh_direction/2aitest/low"
 

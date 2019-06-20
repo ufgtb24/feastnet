@@ -14,7 +14,7 @@ tf.compat.v1.disable_eager_execution()
 
 plc,input_names,input_types=build_plc_b(BLOCK_NUM,adj_dim=ADJ_K)
 
-optimizer = tf.train.AdamOptimizer() #1.x
+# optimizer = tf.train.AdamOptimizer() #1.x
 model=DirectionModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
 
 load_time_dir = '20190620-1412/rutine'  # where to restore the model
@@ -40,7 +40,7 @@ data_path = "F:/ProjectData/mesh_direction/2aitest/low"
 
 need_freeze=False
 
-with tf.Session() as sess:
+with tf.compat.v1.Session() as sess:
     status.initialize_or_restore(sess)
     print(tf.train.list_variables(tf.train.latest_checkpoint(ckpt_full_dir)))
 

@@ -3,11 +3,11 @@ import numpy as np
 def build_plc(block_num,label_shape, adj_dim):
     adjs = []
     perms = []
-    input = tf.placeholder(tf.float32, [None, 3])
-    label = tf.placeholder(tf.float32, label_shape)
+    input = tf.compat.v1.placeholder(tf.float32, [None, 3])
+    label = tf.compat.v1.placeholder(tf.float32, label_shape)
     for i in range(block_num):
-        adjs.append(tf.placeholder(tf.int32, [None, adj_dim]))
-        perms.append(tf.placeholder(tf.int32, [None]))
+        adjs.append(tf.compat.v1.placeholder(tf.int32, [None, adj_dim]))
+        perms.append(tf.compat.v1.placeholder(tf.int32, [None]))
     return {'input': input, 'label': label, 'adjs': adjs, 'perms': perms}
 
 
@@ -29,15 +29,15 @@ def build_plc_b(block_num, adj_dim):
     perms = []
     input_names=[]
     input_types=[]
-    input = tf.placeholder(tf.float32, [1,None, 3],name='vertice')
+    input = tf.compat.v1.placeholder(tf.float32, [1,None, 3],name='vertice')
     input_names.append('vertice')
     input_types.append(tf.float32.as_datatype_enum)
     for i in range(block_num):
-        adjs.append(tf.placeholder(tf.int32, [None, adj_dim],name='adj_%d'%i))
+        adjs.append(tf.compat.v1.placeholder(tf.int32, [None, adj_dim],name='adj_%d'%i))
         input_names.append('adj_%d'%i)
         input_types.append(tf.int32.as_datatype_enum)
         if i!=block_num-1:
-            perms.append(tf.placeholder(tf.int32, [None],name='perm_%d'%i))
+            perms.append(tf.compat.v1.placeholder(tf.int32, [None],name='perm_%d'%i))
             input_names.append('perm_%d' % i)
             input_types.append(tf.int32.as_datatype_enum)
     plc={'vertice': input, 'adjs': adjs, 'perms': perms}

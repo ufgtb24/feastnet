@@ -38,15 +38,15 @@ output=tf.identity(output,'output_node')
 
 data_path = "F:/ProjectData/mesh_direction/2aitest/low"
 
-need_freeze=False
+need_freeze=True
 
 with tf.compat.v1.Session() as sess:
     status.initialize_or_restore(sess)
-    print(tf.train.list_variables(tf.train.latest_checkpoint(ckpt_full_dir)))
+    # print(tf.train.list_variables(tf.train.latest_checkpoint(ckpt_full_dir)))
 
     # sess.run(init)
     if need_freeze:
-        input_name=[key for key in plc.keys()]
+        # tf.io.write_graph(sess.graph_def, ckpt_full_dir, 'graph.pb')
         write_pb(sess,os.path.join(CKPT_PATH,load_time_dir),ckpt_file,input_names,input_types)
     else:
         # status.initialize_or_restore(sess)

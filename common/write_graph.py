@@ -7,7 +7,7 @@ from tensorflow.python.tools import optimize_for_inference_lib
 from common.combine import gen_frozen_graph, input_path, output_node_names
 
 
-def write_pb(sess, time_dir, ckpt_file,input_names,input_types,need_optimize=False):
+def write_pb(sess, ckpt_dir, ckpt_file, input_names, input_types, need_optimize=False):
     gd = sess.graph.as_graph_def()
     
     for node in gd.node:
@@ -22,16 +22,17 @@ def write_pb(sess, time_dir, ckpt_file,input_names,input_types,need_optimize=Fal
             if 'use_locking' in node.attr: del node.attr['use_locking']
         elif node.op == 'AssignAdd':
             node.op = 'Add'
-    constant_graph = graph_util.convert_variables_to_constants(sess, gd, [output_node_names])
-    graph_io.write_graph(constant_graph, time_dir, input_path, as_text=False)
+    # constant_graph = graph_util.convert_variables_to_constants(sess, gd, [output_node_names])
+    # graph_io.write_graph(constant_graph, time_dir, input_path, as_text=False)
+    tf.io.write_graph(gd, ckpt_dir, input_path,as_text=True)
 
     # tf.train.write_graph(constant_graph, time_dir, input_path)
-    # gen_frozen_graph( time_dir,ckpt_file)
-    freeze_graph()
+    gen_frozen_graph(ckpt_dir, ckpt_file)
+    # freeze_graph()
 
     if need_optimize:
         input_graph_def = tf.GraphDef()
-        with tf.gfile.Open(os.path.join(time_dir, 'output_graph.pb'), "rb") as f:
+        with tf.gfile.Open(os.path.join(ckpt_dir, 'output_graph.pb'), "rb") as f:
             data = f.read()
         input_graph_def.ParseFromString(data)
         
@@ -46,5 +47,5 @@ def write_pb(sess, time_dir, ckpt_file,input_names,input_types,need_optimize=Fal
         
         # Save the optimized graph
         
-        f = tf.gfile.FastGFile(os.path.join(time_dir, 'optimized_graph.pb'), "w")
+        f = tf.gfile.FastGFile(os.path.join(ckpt_dir, 'optimized_graph.pb'), "w")
         f.write(output_graph_def.SerializeToString())

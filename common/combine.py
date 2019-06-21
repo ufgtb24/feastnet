@@ -5,7 +5,7 @@ import tensorflow as tf
 
 input_path = 'input_graph.pb'
 input_saver = ""
-input_binary = True
+input_binary = False
 # input_checkpoint = os.path.join(MODEL_PATH,MODEL_NAME)
 
 # Note that we this normally should be only "output_node"!!!

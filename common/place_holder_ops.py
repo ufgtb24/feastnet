@@ -27,21 +27,19 @@ def build_feed_dict(plc, data, iter):
 def build_plc_b(block_num, adj_dim):
     adjs = []
     perms = []
-    input_names=[]
-    input_types=[]
+    input_names={}
     input = tf.compat.v1.placeholder(tf.float32, [1,None, 3],name='vertice')
-    input_names.append('vertice')
-    input_types.append(tf.float32.as_datatype_enum)
+    input_names['vertice']=input
     for i in range(block_num):
-        adjs.append(tf.compat.v1.placeholder(tf.int32, [None, adj_dim],name='adj_%d'%i))
-        input_names.append('adj_%d'%i)
-        input_types.append(tf.int32.as_datatype_enum)
+        adj_plc=tf.compat.v1.placeholder(tf.int32, [None, adj_dim],name='adj_%d'%i)
+        adjs.append(adj_plc)
+        input_names['adj_%d'%i]=adj_plc
         if i!=block_num-1:
-            perms.append(tf.compat.v1.placeholder(tf.int32, [None],name='perm_%d'%i))
-            input_names.append('perm_%d' % i)
-            input_types.append(tf.int32.as_datatype_enum)
+            perm_plc=tf.compat.v1.placeholder(tf.int32, [None],name='perm_%d'%i)
+            perms.append(perm_plc)
+            input_names['perm_%d' % i]=perm_plc
     plc={'vertice': input, 'adjs': adjs, 'perms': perms}
-    return plc,input_names,input_types
+    return plc,input_names,
 
 
 def build_feed_dict_b(plc, input,adjs,perms):

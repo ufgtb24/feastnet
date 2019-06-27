@@ -4,14 +4,12 @@ import os
 from Direction.src.config import *
 from Direction.src.dire_data import process_data
 from Direction.src.freeze_wrapper import write_pb
+from Direction.src.plc import *
 from common.model_keras import DirectionModel
-import tensorflow as tf
 
-# [B,N_INPUT,C]
-from common.place_holder_ops import *
 tf.compat.v1.disable_eager_execution()
 
-plc,input_names=build_plc_b(BLOCK_NUM,adj_dim=ADJ_K)
+plc,input_names=build_plc(BLOCK_NUM,adj_dim=ADJ_K)
 
 # optimizer = tf.train.AdamOptimizer() #1.x
 model=DirectionModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
@@ -48,7 +46,7 @@ with tf.compat.v1.Session() as sess:
     else:
         X, Adjs, Perms=process_data(data_path, 'case_test.txt')
         for x,adjs,perms in zip(X, Adjs, Perms):
-            feed_dict=build_feed_dict_b(plc,x,adjs,perms)
+            feed_dict=build_feed_dict(plc,x,adjs,perms)
             result=sess.run(output,feed_dict=feed_dict)
             print(result.shape)
     

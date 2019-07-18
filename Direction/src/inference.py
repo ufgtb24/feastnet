@@ -19,7 +19,8 @@ ckpt_file = 'ckpt-1440'
 
 
 output = model(plc)
-output=tf.identity(output,'output_node')
+# output=tf.identity(output,'output_node')
+output=tf.reshape(output,[4],'output_node')
 
 ckpt_full_dir = os.path.join(CKPT_PATH, load_time_dir)
 ckpt_full_path = os.path.join(ckpt_full_dir, ckpt_file)
@@ -38,6 +39,8 @@ need_freeze=False
 
 with tf.compat.v1.Session() as sess:
     status.initialize_or_restore(sess)
+    for node in tf.train.list_variables(tf.train.latest_checkpoint(ckpt_full_dir)):
+        print(node)
     if need_freeze:
         import shutil
         shutil.rmtree('../freeze_output')

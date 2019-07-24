@@ -40,7 +40,10 @@ def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
     :return adjs: [np.array([pt_num,ADJ_K])]*coarsen_times
 
     '''
-    adj = np.loadtxt(adj_path).astype(np.int)
+    # TODO:in graph mode ,adj_len(K) matters in placeholder, but the first adj is not related to adj_len,
+    # TODO:which is only determined by input data
+    adj = np.loadtxt(adj_path).astype(np.int32)
+    adj=np.concatenate([adj,np.zeros([adj.shape[0],adj_len-adj.shape[1]],dtype=np.int32)],axis=1)
     perms = []
     adjs = []
     adjs.append(adj) # adj 比 perm  多一个
@@ -100,7 +103,8 @@ def metis(W, levels, biased):
         ss = np.array(W.sum(axis=0)).squeeze()
         rid = np.argsort(ss)  #
     else:
-        rid = np.random.permutation(range(N))
+        # rid = np.random.permutation(range(N))
+        rid = np.arange(N)
     parents = []
     degree = W.sum(axis=0) - W.diagonal()
     
@@ -210,7 +214,6 @@ def metis_one_level(rr,cc,vv,rid,weights):
             count = count + 1
         rowlength[count] = rowlength[count] + 1
     
-    idx=np.where(rowlength>14)[0]
     for ii in range(N):
         tid = rid[ii]
         if not marked[tid]:
@@ -265,9 +268,11 @@ def compute_perm(parents):
 
         indices_layer = []
         for i in indices[-1]:
+            
             # 每个父节点对应一个 indices_node, 索引上一层中的子节点
             # index of where condition is true
-            indices_node = list(np.where(parent == i)[0])
+            indices_node = list((np.where(parent == i)[0]).astype(np.int32))
+            
             assert 0 <= len(indices_node) <= 2
             #print('indices_node: {}'.format(indices_node))
 

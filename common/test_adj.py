@@ -50,10 +50,11 @@ def test_convert():
 
 
 if __name__=="__main__":
-    adj_path="F:/ProjectData/mesh_direction/2aitest/low/BaileyKuo 5/adj.txt"
+    # adj_path="F:/ProjectData/mesh_direction/2aitest/low/BaileyKuo 5/adj.txt"
+    adj_path="E:/VS_Projects/Mesh_Process2019/Test/adj.txt"
     
     # test_coarsen(adj_path)
-    multi_coarsen(adj_path, 14, 4, 2)
+    multi_coarsen(adj_path, 20, 2, 2)
     # count_pairs(adj_path)
     # adj=get_adj("F:/ProjectData/mesh_feature/test.txt")
     # adj=read_adj("F:/ProjectData/mesh_direction/2aitest/low/CassidyFraser 8/adj.txt",need_no=False)

@@ -1,0 +1,10 @@
+2.0 的 tf.train.checkpoint才能将所有参数保存进 ckpt；1.13 的 tf.train.checkpoint只能保存最外层对象的参数。
+同样的，1.13 的 checkpoint.restore(ckpt_full_path) 也不能完全读取 2.0 保存的面向对象ckpt
+
+所以用 2.0 训练保存进 ckpt， 用2.0 读取 ckpt，用2.0推测完全没有问题
+但是面向对象的ckpt不能直接用来调用 freeze_graph， 需要完成以下流程：
+1.  2.0 checkpoint.restore(ckpt_full_path)读取面向对象 ckpt，构建模型
+2.  2.0 关于构建好的模型调用 tf.compat.v1.saved_model.simple_save 生成freez_graph支持的文件(保存模型结构和模型参数，
+     非面向对象)
+3.  2.0 调用 freez_graph 读取上述文件，生成 pb
+4.  其他版本 tf 读取 pb

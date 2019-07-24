@@ -1,15 +1,14 @@
 import tensorflow as tf
 
-def loss_func(pred,label):
+def loss_func(pred,label,mask):
     '''
     
-    :param pred: [feature_cap,3]
-    :param label: [feature_cap,4]
+    :param pred: [rot_num,feature_cap,3]
+    :param label: [rot_num,feature_cap,3]
+    :param mask: [feature_cap]
     :return:
     '''
-    mask=tf.cast(label[:,0],tf.bool) #[feature_cap]
-    label=label[:,1:] #[feature_cap,3]
-    mask_label=tf.boolean_mask(label,mask)  #[valid_feat_num,3]
-    mask_pred=tf.boolean_mask(pred,mask) #[valid_feat_num,3]
+    mask_label=tf.boolean_mask(label,mask,axis=1)  #[rot_num,valid_feat_num,3]
+    mask_pred=tf.boolean_mask(pred,mask,axis=1) #[rot_num,valid_feat_num,3]
     loss=tf.reduce_mean(tf.reduce_sum(tf.square(mask_label-mask_pred),axis=-1))
     return loss

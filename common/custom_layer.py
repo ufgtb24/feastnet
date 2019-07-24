@@ -12,6 +12,7 @@ class Conv_Mesh(tf.keras.layers.Layer):
         super(Conv_Mesh, self).__init__()
     
     def build(self, input_shape):
+        input_shape=input_shape.as_list()
         self.batch_size,_,self.in_channels = input_shape
         
         # Create a trainable weight variable for this layer.
@@ -75,7 +76,9 @@ class Conv_Mesh(tf.keras.layers.Layer):
         :param adj:  N, K
         :return: B,N,K,C
         '''
-        batch_size,num_points, in_channels = x.shape
+        # batch_size,num_points, in_channels = x.shape
+
+        batch_size,num_points, in_channels = tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[2]
         zeros = tf.zeros([batch_size, 1, in_channels], dtype=tf.float32)
         # 索引为0的邻接点，会索引到 0,0
         x = tf.concat([zeros, x], 1)  # [B, N+1, C]

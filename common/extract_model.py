@@ -51,9 +51,9 @@ class Block(tf.keras.layers.Layer):
     
 
 
-class DirectionModel(tf.keras.Model):
+class ExtractModel(tf.keras.Model):
     def __init__(self,block_CHL, coarse_level,fc_dim):
-        super(DirectionModel, self).__init__()
+        super(ExtractModel, self).__init__()
         self.FC_output=tf.keras.layers.Dense(fc_dim)
         self.block_num=len(block_CHL)-1
         self.Blocks=[]

@@ -1,34 +1,54 @@
+import numpy as np
 import os
 from datetime import datetime
 
 import tensorflow as tf
 
-from Direction.src.config import *
-from Direction.src.dire_data import Data_Gen, Rotate_feed
-from Direction.src.loss import pose_estimation_loss
+from feature_detect.src.config import *
+from feature_detect.src.feat_data_keras import Data_Gen, Rotate_feed
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth=True
 # tf.enable_eager_execution(config=config) #1.x
 # tf.debugging.set_log_device_placement(True)
 # print(tf.executing_eagerly())
 from common.extract_model import ExtractModel
+from feature_detect.src.loss_func import loss_func
 
 keras=tf.keras
+
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+  try:
+    # Currently, memory growth needs to be the same across GPUs
+    for gpu in gpus:
+      tf.config.experimental.set_memory_growth(gpu, True)
+    logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+  except RuntimeError as e:
+    # Memory growth must be set before GPUs have been initialized
+    print(e)
+    
 # optimizer = tf.train.AdamOptimizer() #1.x
 optimizer = keras.optimizers.Adam() #2.x
 
-model=ExtractModel(CHANNELS, coarse_level=C_LEVEL, fc_dim=4)
+model=ExtractModel(CHANNELS, coarse_level=C_LEVEL, fc_dim=FEAT_CAP*3)
 # data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
-data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz_test')
-rot_num=20
-rf=Rotate_feed(rot_num,data_gen)
+data_gen = Data_Gen('F:/ProjectData/mesh_feature/tooth_test/tooth/save_npz/back')
+
+rf = Rotate_feed(
+    rot_num=1,
+    rot_range=[np.pi / 30., np.pi / 30., np.pi / 30.],
+    # rot_range=[0, 0, 0],
+    data_gen=data_gen
+)
 mean_metric = keras.metrics.Mean()
 
 
 dir_load = None  # where to restore the model
 # dir_load = '/20190620-1052/rutine'  # where to restore the model
 model_name = 'ckpt-920'
-need_save = True
+need_save = False
 
 # root = tf.train.Checkpoint(optimizer=optimizer,
 #                            model=model,
@@ -61,7 +81,9 @@ for epoch in range(100000):
         with tf.GradientTape() as tape:
             
             output = model(feed_dict)
-            loss = pose_estimation_loss(feed_dict['ori_vertice'], feed_dict['label'], output)
+            output = tf.reshape(output, [-1,FEAT_CAP, 3])
+            loss = loss_func(output,feed_dict['label'],feed_dict['mask'])
+
 
         grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -70,7 +92,7 @@ for epoch in range(100000):
             status.assert_consumed()
         
 
-    if epoch%40==0:
+    if epoch%1==0:
         print("epoch %d  : %f"%(epoch,mean_metric.result().numpy()))
 
         if need_save:

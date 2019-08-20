@@ -45,7 +45,8 @@ with tf.compat.v1.Session() as sess:
         import shutil
         shutil.rmtree('../freeze_output')
         tf.compat.v1.saved_model.simple_save(sess, '../freeze_output', input_names, {'output_node': output})
-        write_pb('../freeze_output')
+        write_pb(input_saved_model_dir='../freeze_output',
+                 output_graph_filename="../output_graph.pb")
     else:
         X, Adjs, Perms=process_data(data_path, 'case_test.txt')
         for x,adjs,perms in zip(X, Adjs, Perms):

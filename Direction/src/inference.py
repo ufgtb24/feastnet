@@ -5,33 +5,33 @@ from Direction.src.config import *
 from Direction.src.dire_data import process_data
 from Direction.src.freeze_wrapper import write_pb
 from Direction.src.plc import *
-from common.model_keras import DirectionModel
+from common.extract_model import ExtractModel
 
 tf.compat.v1.disable_eager_execution()
 
 plc,input_names=build_plc(BLOCK_NUM,adj_dim=ADJ_K)
 
 # optimizer = tf.train.AdamOptimizer() #1.x
-model=DirectionModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
+model=ExtractModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
 
-load_time_dir = '20190620-1412/rutine'  # where to restore the model
-ckpt_file = 'ckpt-1440'
+load_time_dir = '20190821-1059/rutine'  # where to restore the model
+ckpt_file = 'ckpt-160'
 
 
 output = model(plc)
-# output=tf.identity(output,'output_node')
 output=tf.reshape(output,[4],'output_node')
 
 ckpt_full_dir = os.path.join(CKPT_PATH, load_time_dir)
 ckpt_full_path = os.path.join(ckpt_full_dir, ckpt_file)
 checkpoint = tf.train.Checkpoint(model=model)
+# pass if ckpt is equal to the objects
+# optimizer is not built, but it's in the ckpt, so this assert won't pass
 status = checkpoint.restore(ckpt_full_path)
-# status.assert_consumed()  optimizer is not built, so this assert won't pass
 
+# pass if ckpt is equal to or larger than objects
+# all the sub objects can access to their corresponding value in ckpt
 status.assert_existing_objects_matched()
-# init = tf.global_variables_initializer()
 
-# saver=tf.compat.v1.train.Saver(model.trainable_variables)
 
 data_path = "F:/ProjectData/mesh_direction/2aitest/low"
 
@@ -39,19 +39,68 @@ need_freeze=False
 
 with tf.compat.v1.Session() as sess:
     status.initialize_or_restore(sess)
-    for node in tf.train.list_variables(tf.train.latest_checkpoint(ckpt_full_dir)):
-        print(node)
+    # for node in tf.train.list_variables(tf.train.latest_checkpoint(ckpt_full_dir)):
+    #     print(node)
     if need_freeze:
-        import shutil
-        shutil.rmtree('../freeze_output')
-        tf.compat.v1.saved_model.simple_save(sess, '../freeze_output', input_names, {'output_node': output})
-        write_pb(input_saved_model_dir='../freeze_output',
+        if os.path.exists('../freeze_output'):
+            import shutil
+            shutil.rmtree('../freeze_output')
+        else:
+            os.mkdir('../freeze_output')
+        # ordinary model
+        # tf.compat.v1.saved_model.simple_save(sess, '../freeze_output', input_names, {'output_node': output})
+        
+############# SERVER MODEL
+
+        export_path = os.path.join(
+            tf.compat.as_bytes('../freeze_output'),
+            tf.compat.as_bytes(str(1)))
+        print('Exporting trained model to', export_path)
+        builder = tf.compat.v1.saved_model.builder.SavedModelBuilder(export_path)
+        
+        def build_input_info(plc_dict):
+            tensor_infos={'vertice':tf.compat.v1.saved_model.utils.build_tensor_info(plc['vertice'])}
+            adj_infos={'adj_%d' % i:tf.compat.v1.saved_model.utils.build_tensor_info(adj_plc) for i,adj_plc in enumerate(plc['adjs'])}
+            perm_infos={'perm_%d' % i:tf.compat.v1.saved_model.utils.build_tensor_info(perm_plc) for i,perm_plc in enumerate(plc['perms'])}
+            tensor_infos.update(adj_infos)
+            tensor_infos.update(perm_infos)
+            return tensor_infos
+
+
+        inputs_info=build_input_info(plc)
+        output_info = {'output': tf.compat.v1.saved_model.utils.build_tensor_info(output)}
+
+        prediction_signature = (
+            tf.compat.v1.saved_model.signature_def_utils.build_signature_def(
+                inputs=inputs_info,
+                outputs=output_info,
+                method_name=tf.compat.v1.saved_model.signature_constants.PREDICT_METHOD_NAME))
+
+        builder.add_meta_graph_and_variables(
+            sess, [tf.saved_model.SERVING],
+            signature_def_map={
+                'predict_direction':
+                    prediction_signature
+            },
+            main_op=tf.compat.v1.tables_initializer(),
+            strip_default_attrs=True)
+        builder.save()
+        # ##################  SERVER MODEL
+        
+        
+        
+        write_pb(input_saved_model_dir='../freeze_output/1',
                  output_graph_filename="../output_graph.pb")
+
+
+
+
+
     else:
         X, Adjs, Perms=process_data(data_path, 'case_test.txt')
         for x,adjs,perms in zip(X, Adjs, Perms):
             feed_dict=build_feed_dict(plc,x,adjs,perms)
             result=sess.run(output,feed_dict=feed_dict)
-            print(result.shape)
+            print(result)
     
 

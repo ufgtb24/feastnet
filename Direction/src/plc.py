@@ -17,12 +17,12 @@ def build_plc(block_num, adj_dim):
             perms.append(perm_plc)
             input_names['perm_%d' % i] = perm_plc
     plc = {'vertice': vertice, 'adjs': adjs, 'perms': perms}
-    return plc, input_names,
+    return plc, input_names
 
 
 def build_feed_dict(plc, vertice, adjs, perms):
     '''
-    placeholders 和 input array 的对应 dict
+    dict {placeholders:input array}
     '''
     feed_dict = {
         plc['vertice']: vertice[np.newaxis, :],
@@ -36,7 +36,7 @@ def build_feed_dict(plc, vertice, adjs, perms):
 
 def build_feed_dict_pb(block_num, vertice, adjs, perms):
     '''
-    placeholders_name 和 input array 的对应 dict
+    dict {placeholders_name :input array}
     '''
 
     feed_dict = {'import/vertice:0': vertice[np.newaxis, :]}

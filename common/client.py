@@ -32,6 +32,8 @@ Typical usage example:
 from __future__ import print_function
 
 import base64
+import json
+
 import numpy as np
 from Direction.src.plc import *
 from Direction.src.config import *
@@ -41,13 +43,10 @@ import requests
 
 # The server URL specifies the endpoint of your server running the ResNet
 # model with the name "resnet" and using the predict interface.
-SERVER_URL = 'http://localhost:8501/v1/models/direction:predict'
-
-tf.compat.v1.disable_eager_execution()
+SERVER_URL = 'http://192.168.1.119:8501/v1/models/direction:predict'
 
 
-
-def build_instance(plc, vertice, adjs, perms):
+def build_instance(vertice, adjs, perms):
     feed_dict = {
         'vertice': vertice[np.newaxis, :].tolist(),
     }
@@ -56,23 +55,25 @@ def build_instance(plc, vertice, adjs, perms):
     perms_dict = {'perm_%d' % i: perm.tolist() for i, perm in enumerate(perms)}
     feed_dict.update(adjs_dict)
     feed_dict.update(perms_dict)
-    instance={'instances':feed_dict, "signature_name": "predict_direction"}
+    instance=json.dumps({"instances":[feed_dict], "signature_name": "serving_default"})
     return instance
 
 
 def main():
-    plc, input_names = build_plc(BLOCK_NUM, adj_dim=ADJ_K)
     data_path = "F:/ProjectData/mesh_direction/2aitest/low"
     X, Adjs, Perms = process_data(data_path, 'case_test.txt')
     x, adjs, perms =X[0], Adjs[0], Perms[0]
 
-    predict_request = build_instance(plc,x,adjs,perms)
-
+    predict_request = build_instance(x,adjs,perms)
+    print('predict_request:   ',predict_request)
+    headers = {"content-type": "application/json"}
     # Send few requests to warm-up the model.
     for _ in range(3):
-        response = requests.post(SERVER_URL, data=predict_request)
+        response = requests.post(SERVER_URL, data=predict_request, headers=headers)
+        print('r.txt:  ',response.text)
         response.raise_for_status()
-        
+        print('r.json:  ',response.json)
+
         # Send few actual requests and report average latency.
     total_time = 0
     num_requests = 10
@@ -83,7 +84,7 @@ def main():
         prediction = response.json()['predictions'][0]
         
     print('Prediction class: {}, avg latency: {} ms'.format(
-      prediction['output'], (total_time*1000)/num_requests))
+      prediction['output_node'], (total_time*1000)/num_requests))
 
 
 if __name__ == '__main__':

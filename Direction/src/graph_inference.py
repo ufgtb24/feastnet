@@ -14,9 +14,9 @@ X, Adjs, Perms = process_data(data_path, 'case_test.txt')
 
 with tf.compat.v1.Session() as sess:
     load_graph(sess, "../output_graph.pb")
-    # names=[n.name for n in tf.compat.v1.get_default_graph().as_graph_def().node]
-    # for name in names:
-    #     print(name)
+    names=[n.name for n in tf.compat.v1.get_default_graph().as_graph_def().node]
+    for name in names:
+        print(name)
     pred_end = sess.graph.get_tensor_by_name('import/output_node:0')
 
 

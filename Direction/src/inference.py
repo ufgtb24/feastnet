@@ -14,8 +14,10 @@ plc,input_names=build_plc(BLOCK_NUM,adj_dim=ADJ_K)
 # optimizer = tf.train.AdamOptimizer() #1.x
 model=ExtractModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
 
-load_time_dir = '20190821-1059/rutine'  # where to restore the model
-ckpt_file = 'ckpt-160'
+# load_time_dir = '20190821-1059/rutine'  # where to restore the model
+# ckpt_file = 'ckpt-160'
+load_time_dir = '20190823-1511/rutine'  # where to restore the model
+ckpt_file = 'ckpt-80'
 
 
 output = model(plc)
@@ -36,60 +38,69 @@ status.assert_existing_objects_matched()
 data_path = "F:/ProjectData/mesh_direction/2aitest/low"
 
 need_freeze=False
-
+version=1
+model_path=os.path.join('../freeze_output',str(version))
 with tf.compat.v1.Session() as sess:
     status.initialize_or_restore(sess)
     # for node in tf.train.list_variables(tf.train.latest_checkpoint(ckpt_full_dir)):
     #     print(node)
     if need_freeze:
-        if os.path.exists('../freeze_output'):
+        if os.path.exists(model_path):
             import shutil
-            shutil.rmtree('../freeze_output')
+            shutil.rmtree(model_path)
         else:
-            os.mkdir('../freeze_output')
-        # ordinary model
-        # tf.compat.v1.saved_model.simple_save(sess, '../freeze_output', input_names, {'output_node': output})
-        
-############# SERVER MODEL
+            os.mkdir(model_path)
 
-        export_path = os.path.join(
-            tf.compat.as_bytes('../freeze_output'),
-            tf.compat.as_bytes(str(1)))
-        print('Exporting trained model to', export_path)
-        builder = tf.compat.v1.saved_model.builder.SavedModelBuilder(export_path)
-        
         def build_input_info(plc_dict):
-            tensor_infos={'vertice':tf.compat.v1.saved_model.utils.build_tensor_info(plc['vertice'])}
-            adj_infos={'adj_%d' % i:tf.compat.v1.saved_model.utils.build_tensor_info(adj_plc) for i,adj_plc in enumerate(plc['adjs'])}
-            perm_infos={'perm_%d' % i:tf.compat.v1.saved_model.utils.build_tensor_info(perm_plc) for i,perm_plc in enumerate(plc['perms'])}
+            tensor_infos={'vertice':plc['vertice']}
+            adj_infos={'adj_%d' % i:adj_plc for i,adj_plc in enumerate(plc['adjs'])}
+            perm_infos={'perm_%d' % i:perm_plc for i,perm_plc in enumerate(plc['perms'])}
             tensor_infos.update(adj_infos)
             tensor_infos.update(perm_infos)
             return tensor_infos
-
-
-        inputs_info=build_input_info(plc)
-        output_info = {'output': tf.compat.v1.saved_model.utils.build_tensor_info(output)}
-
-        prediction_signature = (
-            tf.compat.v1.saved_model.signature_def_utils.build_signature_def(
-                inputs=inputs_info,
-                outputs=output_info,
-                method_name=tf.compat.v1.saved_model.signature_constants.PREDICT_METHOD_NAME))
-
-        builder.add_meta_graph_and_variables(
-            sess, [tf.saved_model.SERVING],
-            signature_def_map={
-                'predict_direction':
-                    prediction_signature
-            },
-            main_op=tf.compat.v1.tables_initializer(),
-            strip_default_attrs=True)
-        builder.save()
-        # ##################  SERVER MODEL
+        # ordinary model
+        tf.compat.v1.saved_model.simple_save(sess, model_path, build_input_info(plc), {'output_node': output})
+        
+# ############# SERVER MODEL
+#
+#         export_path = os.path.join(
+#             tf.compat.as_bytes('../freeze_output'),
+#             tf.compat.as_bytes(str(1)))
+#         print('Exporting trained model to', export_path)
+#         builder = tf.compat.v1.saved_model.builder.SavedModelBuilder(export_path)
+#
+#         def build_input_info(plc_dict):
+#             tensor_infos={'vertice':tf.compat.v1.saved_model.utils.build_tensor_info(plc['vertice'])}
+#             adj_infos={'adj_%d' % i:tf.compat.v1.saved_model.utils.build_tensor_info(adj_plc) for i,adj_plc in enumerate(plc['adjs'])}
+#             perm_infos={'perm_%d' % i:tf.compat.v1.saved_model.utils.build_tensor_info(perm_plc) for i,perm_plc in enumerate(plc['perms'])}
+#             tensor_infos.update(adj_infos)
+#             tensor_infos.update(perm_infos)
+#             return tensor_infos
+#
+#
+#         inputs_info=build_input_info(plc)
+#         output_info = {'output': tf.compat.v1.saved_model.utils.build_tensor_info(output)}
+#
+#         prediction_signature = (
+#             tf.compat.v1.saved_model.signature_def_utils.build_signature_def(
+#                 inputs=inputs_info,
+#                 outputs=output_info,
+#                 method_name=tf.compat.v1.saved_model.signature_constants.PREDICT_METHOD_NAME))
+#
+#         builder.add_meta_graph_and_variables(
+#             sess, [tf.saved_model.SERVING],
+#             signature_def_map={
+#                 'predict_direction':
+#                     prediction_signature
+#             },
+#             main_op=tf.compat.v1.tables_initializer(),
+#             strip_default_attrs=True)
+#         builder.save()
+#         # ##################  SERVER MODEL
         
         
         
-        write_pb(input_saved_model_dir='../freeze_output/1',
+        write_pb(input_saved_model_dir=model_path,
                  output_graph_filename="../output_graph.pb")
 
 

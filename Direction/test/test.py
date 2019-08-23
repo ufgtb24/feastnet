@@ -1,79 +1,51 @@
-import os
-
 import tensorflow as tf
-config = tf.ConfigProto()
-config.gpu_options.allow_growth=True
-tf.enable_eager_execution(config=config) #1.x
 
+from Direction.src.dire_data import process_data
+from Direction.src.freeze_wrapper import load_graph
+from Direction.src.config import *
+from Direction.src.plc import *
+from common.coarsening import multi_coarsen
+print(tf.__version__)
+# adj_path='../adj.txt'
+# perms, adjs = multi_coarsen(adj_path, ADJ_K, BLOCK_NUM - 1, C_LEVEL)
+tf.compat.v1.disable_eager_execution()
 
-class MyLayer(tf.keras.layers.Layer):
-    """A simple linear model."""
+version=1
+model_path=os.path.join('../freeze_output',str(version))
+plc,input_names=build_plc(BLOCK_NUM,adj_dim=ADJ_K)
+
+with tf.compat.v1.Session() as sess:
+    load_graph(sess, "../output_graph.pb")
+    pred_end = sess.graph.get_tensor_by_name('import/output_node:0')
+
+    # names=[n.name for n in tf.compat.v1.get_default_graph().as_graph_def().node]
+    # for name in names:
+    #     print(name)
+
+    if os.path.exists(model_path):
+        import shutil
     
-    def __init__(self):
-        super(MyLayer, self).__init__()
-        # self.l1 = tf.keras.layers.Dense(5)
-    def build(self, input_shape):
-        self.w=self.add_weight(
-            name='www',
-            shape=(input_shape[-1],5),
-                               initializer='uniform',
-                               trainable=True
-                               )
-        self.b=self.add_weight(
-            name='bbb',
-            shape=(5,),
-                               initializer='uniform',
-                               trainable=True
-                               )
-    def call(self, x):
-        return tf.matmul(x,self.w)+self.b
+        shutil.rmtree(model_path)
+    else:
+        os.mkdir(model_path)
 
 
-class Net(tf.keras.Model):
-    """A simple linear model."""
-    
-    def __init__(self):
-        super(Net, self).__init__()
-        self.l2 = MyLayer()
-    
-    def call(self, x):
-        return self.l2(x)
-def toy_dataset():
-    inputs = tf.range(10.)[:, None]
-    labels = inputs * 5. + tf.range(5.)[None, :]
-    return tf.data.Dataset.from_tensor_slices(
-        dict(x=inputs, y=labels)).repeat(100).batch(2)
+    def build_input_info():
+        tensor_infos = {'vertice': sess.graph.get_tensor_by_name('import/output_node:0')}
+        adj_infos = {'adj_%d' % i: sess.graph.get_tensor_by_name('import/adj_%d:'%i) for i in range(3)}
+        perm_infos = {'perm_%d' % i: sess.graph.get_tensor_by_name('import/perm_%d:'%i) for i in range(2)}
+        tensor_infos.update(adj_infos)
+        tensor_infos.update(perm_infos)
+        return tensor_infos
 
 
-def train_step(net, example, optimizer):
-    """Trains `net` on `example` using `optimizer`."""
-    with tf.GradientTape() as tape:
-        output = net(example['x'])
-        loss = tf.reduce_mean(tf.abs(output - example['y']))
-    variables = net.trainable_variables
-    gradients = tape.gradient(loss, variables)
-    optimizer.apply_gradients(zip(gradients, variables))
-    return loss
+
+    pred_end = sess.graph.get_tensor_by_name('import/output_node:0')
+
+    # ordinary model
+    tf.compat.v1.saved_model.simple_save(sess, model_path, build_input_info(), {'output_node': pred_end})
 
 
-opt = tf.train.AdamOptimizer(0.1)
-net = Net()
-ckpt = tf.train.Checkpoint(optimizer=opt, net=net)
-if not os.path.exists('./tf_ckpts'):
-    os.mkdir('./tf_ckpts')
-manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=3)
-print(tf.train.list_variables(tf.train.latest_checkpoint('./tf_ckpts')))
-ckpt.restore(manager.latest_checkpoint)
-if manager.latest_checkpoint:
-    print("Restored from {}".format(manager.latest_checkpoint))
-else:
-    print("Initializing from scratch.")
-iter=0
-for example in toy_dataset():
-    loss = train_step(net, example, opt)
-    # ckpt.step.assign_add(1)
-    if iter % 10 == 0:
-        save_path = manager.save()
-        print("Saved checkpoint for step {}: {}".format(iter, save_path))
-        print("loss {:1.2f}".format(loss.numpy()))
-    iter+=1
+
+
+

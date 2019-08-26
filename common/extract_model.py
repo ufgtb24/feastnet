@@ -64,7 +64,7 @@ class ExtractModel(tf.keras.Model):
             # this kind of sub layers can not be recorded by tf.train.checkpoint, for its lack of key
             self.Blocks.append(Block(ch_in, ch_out, coarse_level=coarse_level))
 
-    def call(self, feed_dict):
+    def call(self, feed_dict,need_sqeeze=False):
         """Run the model. will call build
         """
         
@@ -72,6 +72,9 @@ class ExtractModel(tf.keras.Model):
         net=feed_dict['vertice']
         adjs=feed_dict['adjs']
         perms=feed_dict['perms']
+        if need_sqeeze:
+            adjs=[tf.squeeze(adj,axis=0) for adj in adjs]
+            perms=[tf.squeeze(perm,axis=0) for perm in perms]
 
         for idx,block in enumerate(self.Blocks):
             if idx == self.block_num-1:

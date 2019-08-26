@@ -48,7 +48,7 @@ SERVER_URL = 'http://192.168.1.119:8501/v1/models/direction:predict'
 
 def build_instance(vertice, adjs, perms):
     feed_dict = {
-        'vertice': vertice[np.newaxis, :].tolist(),
+        'vertice': vertice.tolist(),
     }
     
     adjs_dict = {'adj_%d' % i: adj.tolist() for i, adj in enumerate(adjs)}

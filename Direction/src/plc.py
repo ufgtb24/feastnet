@@ -2,18 +2,26 @@ import tensorflow as tf
 import numpy as np
 
 
-def build_plc(block_num, adj_dim):
+def build_plc(block_num, adj_dim ,need_batch=False):
     adjs = []
     perms = []
     input_names = {}
     vertice = tf.compat.v1.placeholder(tf.float32, [1, None, 3], name='vertice')
     input_names['vertice'] = vertice
+    
+    if need_batch:
+        adjs_shape=[1,None, adj_dim]
+        perms_shape=[1,None]
+    else:
+        adjs_shape=[None, adj_dim]
+        perms_shape=[None]
+
     for i in range(block_num):
-        adj_plc = tf.compat.v1.placeholder(tf.int32, [None, adj_dim], name='adj_%d' % i)
+        adj_plc = tf.compat.v1.placeholder(tf.int32, adjs_shape, name='adj_%d' % i)
         adjs.append(adj_plc)
         input_names['adj_%d' % i] = adj_plc
         if i != block_num - 1:
-            perm_plc = tf.compat.v1.placeholder(tf.int32, [None], name='perm_%d' % i)
+            perm_plc = tf.compat.v1.placeholder(tf.int32, perms_shape, name='perm_%d' % i)
             perms.append(perm_plc)
             input_names['perm_%d' % i] = perm_plc
     plc = {'vertice': vertice, 'adjs': adjs, 'perms': perms}

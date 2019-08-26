@@ -9,7 +9,7 @@ from common.extract_model import ExtractModel
 
 tf.compat.v1.disable_eager_execution()
 
-plc,input_names=build_plc(BLOCK_NUM,adj_dim=ADJ_K)
+plc,input_names=build_plc(BLOCK_NUM,adj_dim=ADJ_K,need_batch=True)
 
 # optimizer = tf.train.AdamOptimizer() #1.x
 model=ExtractModel(CHANNELS,coarse_level=C_LEVEL,fc_dim=4)
@@ -20,8 +20,8 @@ load_time_dir = '20190823-1511/rutine'  # where to restore the model
 ckpt_file = 'ckpt-80'
 
 
-output = model(plc)
-output=tf.reshape(output,[4],'output_node')
+output = model(plc,need_sqeeze=True)
+output=tf.identity(output,'output_node')
 
 ckpt_full_dir = os.path.join(CKPT_PATH, load_time_dir)
 ckpt_full_path = os.path.join(ckpt_full_dir, ckpt_file)
@@ -37,7 +37,7 @@ status.assert_existing_objects_matched()
 
 data_path = "F:/ProjectData/mesh_direction/2aitest/low"
 
-need_freeze=False
+need_freeze=True
 version=1
 model_path=os.path.join('../freeze_output',str(version))
 with tf.compat.v1.Session() as sess:

@@ -8,12 +8,27 @@ from feature_detect.src.config import *
 from common.coarsening import multi_coarsen
 
 
-def parse_feature(feature_file, feat_cap):
+def get_local(world_coord, center_coord, postfix):
+    local_coord = world_coord - center_coord
+    if postfix == 'UR':
+        local_coord = local_coord * [-1, 1, 1]
+    elif postfix == 'DL':
+        local_coord = local_coord * [1, -1, 1]
+    elif postfix == 'DR':
+        local_coord = local_coord * [-1, -1, 1]
+    return local_coord
+
+def parse_vertice(vertice_file,center,postfix):
+    v=np.loadtxt(vertice_file)
+    v=get_local(v,center,postfix)
+    return v
+    
+def parse_feature(feature_file, feat_cap, postfix):
     feat_arr = np.zeros([feat_cap, 4])
     
     with open(feature_file)as f:
         line = f.readline()
-        feat_list = line.split(',')
+        feat_list = line.split(',')[:-1]
         origin = None
         for feat3d in feat_list:
             feat3d_array = np.array(list(map(float, feat3d.split())))
@@ -24,8 +39,8 @@ def parse_feature(feature_file, feat_cap):
                 origin = feat_coord
             else:
                 feat_arr[feat_id][0] = 1
-                feat_arr[feat_id][1:] = feat_coord - origin
-    return feat_arr
+                feat_arr[feat_id][1:] = get_local(feat_coord ,origin,postfix)
+    return feat_arr,origin
 
 
 def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=False):
@@ -66,20 +81,26 @@ def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=Fals
             if not os.path.exists(filepath):
                 print("not found file " + filepath)
                 continue
-            for task_name, tooth_ids in tasks.items():
-                for tooth_id in tooth_ids:
-                    print('tooth_id: ', tooth_id)
-                    tooth_path = os.path.join(filepath, 'tooth%d' % (tooth_id))
-                    if os.path.exists(tooth_path):
-                        task_x[task_name].append(
-                            np.loadtxt(os.path.join(tooth_path, 'x.txt')))  # [pt_num,3]
-                        
-                        perms, adjs = multi_coarsen(os.path.join(tooth_path, 'adj.txt'), ADJ_K, BLOCK_NUM, C_LEVEL)
-                        task_adj[task_name].append(adjs)  # [pt_num,K]
-                        task_perm[task_name].append(perms)  # [pt_num,K]
-                        # [feat_cap,4]
-                        feat_arr = parse_feature(os.path.join(tooth_path, 'y.txt'), feat_cap=feat_cap)
-                        task_y[task_name].append(feat_arr)
+            
+            for postfix in os.listdir(filepath):
+                part_path=os.path.join(filepath,postfix)
+                print('part_path: ', part_path)
+
+                for task_name, tooth_ids in tasks.items():
+                    for tooth_id in tooth_ids:
+                        print('tooth_id: ', tooth_id)
+                        tooth_path = os.path.join(part_path, 'tooth%d' % (tooth_id))
+                        if os.path.exists(tooth_path):
+                            # [feat_cap,4]
+                            feat_arr,center = parse_feature(os.path.join(tooth_path, 'feature.txt'), feat_cap=feat_cap,postfix=postfix)
+                            task_y[task_name].append(feat_arr)
+                            # [pt_num,3]
+                            task_x[task_name].append(
+                                parse_vertice(os.path.join(tooth_path, 'vertice.txt'),center,postfix))
+                            
+                            perms, adjs = multi_coarsen(os.path.join(tooth_path, 'adj.txt'), BLOCK_NUM, C_LEVEL)
+                            task_adj[task_name].append(adjs)  # [pt_num,K]
+                            task_perm[task_name].append(perms)  # [pt_num,K]
     
     for task_name in tasks.keys():
         task_path = os.path.join(save_path, task_name)
@@ -106,7 +127,7 @@ def rotate(vertices,features, num_samples ,rot_range):
     mask=features[:,0].astype(np.bool)
     # [FEAT_CAP, 3]
     features=features[:,1:].astype(np.float32)
-    # random_angles.shape: (num_samples, 3)
+    
     random_angles_x = np.random.uniform(-rot_range[0], rot_range[0],
                                       (num_samples)).astype(np.float32)
     random_angles_y = np.random.uniform(-rot_range[1], rot_range[1],
@@ -114,6 +135,7 @@ def rotate(vertices,features, num_samples ,rot_range):
     random_angles_z = np.random.uniform(-rot_range[2], rot_range[2],
                                       (num_samples)).astype(np.float32)
 
+    # random_angles.shape: (num_samples, 3)
     random_angles=np.stack([random_angles_x,random_angles_y,random_angles_z],axis=1)
     ## debug
     regular_angles=np.concatenate([np.linspace(-np.pi, np.pi,num_samples)[:,np.newaxis],
@@ -169,7 +191,7 @@ class Rotate_feed():
         self.ref_idx = -1
         self.rot_idx = -1
         self.load_data()
-        self.rotate_case()
+        # self.rotate_case()
     
     def load_data(self):
         self.data,  npz_name,epoch_end = self.data_gen.load_pkg()
@@ -200,8 +222,14 @@ class Rotate_feed():
         return input_dict,epoch_end
     
 
-
+def get_idx(file_path):
+    # 生成索引文件
+    with open(os.path.join(file_path,'case.txt'),'w')as f:
+        for file_name in os.listdir(file_path):
+            if os.path.isdir(os.path.join(file_path,file_name)):
+                f.write(file_name+'\n')
 if __name__=='__main__':
-    data_path='F:/ProjectData/mesh_feature/tooth_test/tooth'
-    save_path='F:/ProjectData/mesh_feature/tooth_test/tooth/save_npz'
+    data_path='F:/ProjectData/mesh_feature/A'
+    save_path='F:/ProjectData/mesh_feature/B/save_npz'
+    get_idx(data_path)
     save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)

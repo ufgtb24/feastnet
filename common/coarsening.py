@@ -14,12 +14,10 @@ def coarsen(A,levels, biased):
     # e.g.  graph[i][0,n]代表最先形成的cluster到第n个形成的cluster之间的连接
     # parents:下层id到上层id之间的映射。id是本层cluster形成的顺序
 
-    
-    graphs, parents = metis(A, levels,biased) # 3 graphs   2 parents
+    A_out, parents = metis(A, levels,biased) # 3 graphs   2 parents
     # 根据最顶层id升序，返回自底向上的id二叉树，二叉树的结构定义了层间连接关系
     perms = compute_perm(parents)  # 3 perms
     perm_in=np.array(perms[0])
-    A_out=graphs[-1]
 
     # if not self_connections:
     #     A_out = A_out.tocoo()
@@ -29,8 +27,19 @@ def coarsen(A,levels, biased):
 
     return perm_in, A_out
 
-
-def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
+def newadj(adj_path):
+    path=adj_path.split('.')[0]
+    new_path=path+'1.txt'
+    fnew=open(new_path,'w')
+    with open(adj_path)as f:
+        G=f.readlines()
+        for line in G[1:]:
+            fnew.write(line)
+    fnew.close()
+    return new_path
+    
+    
+def multi_coarsen(adj_path, coarsen_times, coarsen_level):
     '''
 
     :param adj_path:
@@ -40,16 +49,20 @@ def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
     :return adjs: [np.array([pt_num,ADJ_K])]*coarsen_times
 
     '''
-    # TODO:in graph mode ,adj_len(K) matters in placeholder, but the first adj is not related to adj_len,
-    # TODO:which is only determined by input data
+    # in graph mode ,adj_lenK matters in placeholder, but the first adj is not related to adj_len,
+    # which is only determined by input data
+    # newpath=newadj(adj_path)
     adj = np.loadtxt(adj_path).astype(np.int32)
-    adj=np.concatenate([adj,np.zeros([adj.shape[0],adj_len-adj.shape[1]],dtype=np.int32)],axis=1)
+    
+    # adj=np.concatenate([adj,np.zeros([adj.shape[0],adj_len-adj.shape[1]],dtype=np.int32)],axis=1)
     perms = []
     adjs = []
     adjs.append(adj) # adj 比 perm  多一个
+    adj_len=adj.shape[1]
     for i in range(coarsen_times):
         print('c_time: ', i)
         if i==0:
+            
             # 可以兼容adj截断的状况，不会越界，但是不再是对称矩阵
             A_in = adj_to_A(adj)
             biased=False
@@ -68,9 +81,8 @@ def multi_coarsen(adj_path, adj_len, coarsen_times, coarsen_level):
         perms.append(perm_in)
         # print(A_out.nnz)
         A_adj=A_out.copy()
-        A_adj.setdiag(0)
         # print(A_adj.nnz)
-        adj = A_to_adj(adj_len, A_adj)  # TODO 需要小 K ?
+        adj = A_to_adj(A_adj)
         adjs.append(adj)
     return np.array(perms), np.array(adjs)
  
@@ -96,20 +108,20 @@ def metis(W, levels, biased):
     NOTE
     if "graph" is a list of length k, then "parents" will be a list of length k-1
     """
-
+    # print(is_Symm(W))
     N, N = W.shape
 
     if biased:
         ss = np.array(W.sum(axis=0)).squeeze()
-        rid = np.argsort(ss)  #
+        rid = np.argsort(ss)  # 按照节点的度来确定处理顺序
     else:
-        # rid = np.random.permutation(range(N))
-        rid = np.arange(N)
+        rid = np.random.permutation(range(N))
+        # rid = np.arange(N)  # 调试顺序
     parents = []
     degree = W.sum(axis=0) - W.diagonal()
     
-    graphs = []
-    graphs.append(W)
+    # graphs = []
+    # graphs.append(W)
 
     for l in range(levels):
 
@@ -166,10 +178,9 @@ def metis(W, levels, biased):
         W = scipy.sparse.coo_matrix((nvv,(nrr,ncc)), shape=(Nnew,Nnew))
         W.eliminate_zeros() # 稀疏
         
-        
-        
+        assert is_Symm(W)
         # Add new graph to the list of all coarsened graphs
-        graphs.append(W)
+        # graphs.append(W)
 
         # COMPUTE THE DEGREE (OMIT OR NOT SELF LOOPS) 忽略自环，weight变小，该点更容易被团结。
         # 但是如果该点已经是团结过好几次的了，那么应该减小它被继续团结的可能，否则会产生吸收黑洞，
@@ -188,7 +199,7 @@ def metis(W, levels, biased):
         rid = np.argsort(ss) #
     # graphs 比 parents 多一层
     # graphs: finest to coarsest  包含自环,权值可以大于1，代表连接强弱
-    return graphs, parents
+    return W, parents
 
 
 # Coarsen a graph given by rr,cc,vv.  rr is assumed to be ordered
@@ -399,37 +410,47 @@ def adj_to_A(adj):
     # A=A.tocsr()
     # A.setdiag(0)
     A.eliminate_zeros()  # 稀疏
+    s=is_Symm(A)
     return A
 
 
-def A_to_adj(K,A):
+def A_to_adj(A):
     '''
     in np, used after each time of coarsening when new A is created
     in coarsen, A id is begin from 0, while in conv, adj id is begin from 1
     :return: num_points, K
     '''
+    A.setdiag(0)
     cc,rr,  val = scipy.sparse.find(A)
     # 发现 A 不对称
     # perm = np.argsort(rr)
     # rr = rr[perm]
     # cc = cc[perm]
     N,N=A.shape
+    K = np.max((A != 0).sum(axis=0))
+
     pair_num=rr.shape[0]
     adj = np.zeros([N,K], np.int32)
     cur_row = rr[0]
     cur_col=0
-    
+    max_col=0 #第一个本行为空的列索引
     for i in range(pair_num):
         if rr[i]>cur_row:
             adj[cur_row,cur_col:]=0
             cur_row=rr[i]
+            if cur_col>max_col:
+                # 第一个没有元素的索引
+                max_col=cur_col
             cur_col=0
             # count+=1
         adj[rr[i],cur_col]=cc[i]+1
         cur_col+=1
+    adj=adj[:,:max_col] # adj.shape()[1]=max_col
     return adj
 
 
     
 
-    
+if __name__=='__main__':
+    adj_path='F:\\ProjectData\\mesh_feature\\A\\Demo Case1\\DL\\tooth2\\adj.txt'
+    newadj(adj_path)

@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-from feature_detect.src.config import ADJ_K, BLOCK_NUM, TASKS, C_LEVEL, FEAT_CAP
+from feature_detect.src.config import  BLOCK_NUM, TASKS, C_LEVEL, FEAT_CAP
 from common.coarsening import adj_to_A, coarsen, A_to_adj, multi_coarsen
 
 

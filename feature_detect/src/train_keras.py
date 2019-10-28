@@ -17,24 +17,13 @@ from feature_detect.src.loss_func import loss_func
 keras=tf.keras
 
 
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-  try:
-    # Currently, memory growth needs to be the same across GPUs
-    for gpu in gpus:
-      tf.config.experimental.set_memory_growth(gpu, True)
-    logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-  except RuntimeError as e:
-    # Memory growth must be set before GPUs have been initialized
-    print(e)
-    
+
 # optimizer = tf.train.AdamOptimizer() #1.x
 optimizer = keras.optimizers.Adam() #2.x
 
 model=ExtractModel(CHANNELS, coarse_level=C_LEVEL, fc_dim=FEAT_CAP*3)
 # data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
-data_gen = Data_Gen('F:/ProjectData/mesh_feature/tooth_test/tooth/save_npz/back')
+data_gen = Data_Gen('F:/ProjectData/mesh_feature/Case-feature_npz/back')
 
 rf = Rotate_feed(
     rot_num=1,

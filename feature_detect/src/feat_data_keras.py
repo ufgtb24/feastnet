@@ -28,7 +28,7 @@ def parse_feature(feature_file, feat_cap, postfix):
     
     with open(feature_file)as f:
         line = f.readline()
-        feat_list = line.split(',')[:-1]
+        feat_list = line.split(',')
         origin = None
         for feat3d in feat_list:
             feat3d_array = np.array(list(map(float, feat3d.split())))
@@ -229,7 +229,7 @@ def get_idx(file_path):
             if os.path.isdir(os.path.join(file_path,file_name)):
                 f.write(file_name+'\n')
 if __name__=='__main__':
-    data_path='F:/ProjectData/mesh_feature/A'
-    save_path='F:/ProjectData/mesh_feature/B/save_npz'
-    get_idx(data_path)
+    data_path='F:/ProjectData/mesh_feature/Case-feature'
+    save_path='F:/ProjectData/mesh_feature/Case-feature_npz'
+    # get_idx(data_path)
     save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)

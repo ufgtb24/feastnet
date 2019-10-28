@@ -10,11 +10,11 @@ from common.coarsening import multi_coarsen
 
 def get_local(world_coord, center_coord, postfix):
     local_coord = world_coord - center_coord
-    if postfix == 'UR':
+    if postfix == 'DR':
         local_coord = local_coord * [-1, 1, 1]
-    elif postfix == 'DL':
+    elif postfix == 'UL':
         local_coord = local_coord * [1, -1, 1]
-    elif postfix == 'DR':
+    elif postfix == 'UR':
         local_coord = local_coord * [-1, -1, 1]
     return local_coord
 
@@ -229,7 +229,11 @@ def get_idx(file_path):
             if os.path.isdir(os.path.join(file_path,file_name)):
                 f.write(file_name+'\n')
 if __name__=='__main__':
-    data_path='F:/ProjectData/mesh_feature/Case-feature'
-    save_path='F:/ProjectData/mesh_feature/Case-feature_npz'
-    # get_idx(data_path)
+    # data_path='F:/ProjectData/mesh_feature/test/test_data'
+    # save_path='F:/ProjectData/mesh_feature/test/test-npz'
+    data_path='F:/ProjectData/mesh_feature/Case'
+    save_path='F:/ProjectData/mesh_feature/Case_npz'
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+    get_idx(data_path)
     save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)

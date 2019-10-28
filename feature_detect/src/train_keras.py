@@ -22,8 +22,7 @@ keras=tf.keras
 optimizer = keras.optimizers.Adam() #2.x
 
 model=ExtractModel(CHANNELS, coarse_level=C_LEVEL, fc_dim=FEAT_CAP*3)
-# data_gen = Data_Gen('F:/ProjectData/mesh_direction/2aitest/low/npz')
-data_gen = Data_Gen('F:/ProjectData/mesh_feature/Case-feature_npz/back')
+data_gen = Data_Gen('F:/ProjectData/mesh_feature/Case_npz/back')
 
 rf = Rotate_feed(
     rot_num=1,
@@ -37,7 +36,7 @@ mean_metric = keras.metrics.Mean()
 dir_load = None  # where to restore the model
 # dir_load = '/20190620-1052/rutine'  # where to restore the model
 model_name = 'ckpt-920'
-need_save = False
+need_save = True
 
 # root = tf.train.Checkpoint(optimizer=optimizer,
 #                            model=model,
@@ -59,8 +58,8 @@ if need_save:
     os.makedirs(ckpt_dir_rut)
     val_manager = tf.train.CheckpointManager(ckpt, ckpt_dir_val, max_to_keep=3)
     rut_manager = tf.train.CheckpointManager(ckpt, ckpt_dir_rut, max_to_keep=3)
+    rut_manager.save(0)
 
-var_created=False
 for epoch in range(100000):
     # print("epoch ",epoch)
     mean_metric.reset_states()

@@ -6,36 +6,41 @@ import tensorflow as tf
 
 from feature_detect.src.config import *
 from feature_detect.src.feat_data_keras import Data_Gen, Rotate_feed
-# config = tf.ConfigProto()
-# config.gpu_options.allow_growth=True
-# tf.enable_eager_execution(config=config) #1.x
-# tf.debugging.set_log_device_placement(True)
-# print(tf.executing_eagerly())
 from common.extract_model import ExtractModel
 from feature_detect.src.loss_func import loss_func
 
 keras=tf.keras
 
+# ###  enable GPU growth !!
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+  try:
+    # Currently, memory growth needs to be the same across GPUs
+    for gpu in gpus:
+      tf.config.experimental.set_memory_growth(gpu, True)
+    logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+  except RuntimeError as e:
+    # Memory growth must be set before GPUs have been initialized
+    print(e)
 
-
-# optimizer = tf.train.AdamOptimizer() #1.x
 optimizer = keras.optimizers.Adam() #2.x
 
 model=ExtractModel(CHANNELS, coarse_level=C_LEVEL, fc_dim=FEAT_CAP*3)
 data_gen = Data_Gen('F:/ProjectData/mesh_feature/Case_npz/back')
 
 rf = Rotate_feed(
-    rot_num=1,
-    rot_range=[np.pi / 30., np.pi / 30., np.pi / 30.],
+    rot_num=2,
+    rot_range=[np.pi / 18., np.pi / 18., np.pi / 18.],
     # rot_range=[0, 0, 0],
     data_gen=data_gen
 )
 mean_metric = keras.metrics.Mean()
 
 
-dir_load = None  # where to restore the model
-# dir_load = '/20190620-1052/rutine'  # where to restore the model
-model_name = 'ckpt-920'
+# dir_load = None  # where to restore the model
+dir_load = '/20191029-2007/rutine'  # where to restore the model
+model_name = 'ckpt-39'
 need_save = True
 
 # root = tf.train.Checkpoint(optimizer=optimizer,
@@ -58,7 +63,10 @@ if need_save:
     os.makedirs(ckpt_dir_rut)
     val_manager = tf.train.CheckpointManager(ckpt, ckpt_dir_val, max_to_keep=3)
     rut_manager = tf.train.CheckpointManager(ckpt, ckpt_dir_rut, max_to_keep=3)
-    rut_manager.save(0)
+    writer = tf.summary.create_file_writer(ckpt_dir_rut)
+
+keras.datasets.mnist.load_data()
+
 
 for epoch in range(100000):
     # print("epoch ",epoch)
@@ -81,9 +89,14 @@ for epoch in range(100000):
         
 
     if epoch%1==0:
-        print("epoch %d  : %f"%(epoch,mean_metric.result().numpy()))
+        epoch_loss=mean_metric.result().numpy()
+        print("epoch %d  : %f"%(epoch,epoch_loss))
 
         if need_save:
+            with writer.as_default():
+                tf.summary.scalar("loss", epoch_loss, step=epoch)
+                writer.flush()
             # model.save_weights("../ckpt/ckpt")
             rut_manager.save(epoch)
             # ckpt.save(os.path.join(ckpt_dir_rut,'model.ckpt'))
+

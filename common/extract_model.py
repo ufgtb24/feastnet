@@ -7,7 +7,7 @@ class Block(tf.keras.layers.Layer):
         self.conv2=Conv_Mesh(ch_out, 9)
         self.Pool_layers=[tf.keras.layers.AveragePooling1D(pool_size=2,strides=2)]*coarse_level
         super(Block, self).__init__()
-        
+
     def call(self,x,adj,perm):
         '''
         
@@ -63,7 +63,6 @@ class ExtractModel(tf.keras.Model):
             # exec('self.Blocks.append(self.block_%d)'%idx)
             # this kind of sub layers can not be recorded by tf.train.checkpoint, for its lack of key
             self.Blocks.append(Block(ch_in, ch_out, coarse_level=coarse_level))
-
     def call(self, feed_dict,need_sqeeze=False):
         """Run the model. will call build
         """

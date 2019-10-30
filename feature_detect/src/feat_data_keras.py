@@ -113,7 +113,6 @@ def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=Fals
                  perms=np.array(task_perm[task_name]),
                  y=np.array(task_y[task_name])
                  )
-
 def rotate(vertices,features, num_samples ,rot_range):
     '''
     
@@ -140,8 +139,6 @@ def rotate(vertices,features, num_samples ,rot_range):
     ## debug
     regular_angles=np.concatenate([np.linspace(-np.pi, np.pi,num_samples)[:,np.newaxis],
                                    np.zeros((num_samples,2))],axis=-1).astype(np.float32)
-    
-    ##
     
     # random_quaternion.shape: (num_samples, 4)
     random_quaternion = quaternion.from_euler(random_angles)
@@ -229,10 +226,10 @@ def get_idx(file_path):
             if os.path.isdir(os.path.join(file_path,file_name)):
                 f.write(file_name+'\n')
 if __name__=='__main__':
-    # data_path='F:/ProjectData/mesh_feature/test/test_data'
-    # save_path='F:/ProjectData/mesh_feature/test/test-npz'
-    data_path='F:/ProjectData/mesh_feature/Case'
-    save_path='F:/ProjectData/mesh_feature/Case_npz'
+    data_path='F:/ProjectData/mesh_feature/test/test_data'
+    save_path='F:/ProjectData/mesh_feature/test/test_npz'
+    # data_path='F:/ProjectData/mesh_feature/Case'
+    # save_path='F:/ProjectData/mesh_feature/Case_npz'
     if not os.path.exists(save_path):
         os.mkdir(save_path)
     get_idx(data_path)

@@ -76,12 +76,10 @@ def multi_coarsen(adj_path, coarsen_times, coarsen_level):
         else:
             A_in=A_out
             biased=True
-        # A_in = adj_to_A(adj)
+        # is_symm, sub = is_Symm(A_in)
         perm_in, A_out = coarsen(A_in, coarsen_level,biased)
         perms.append(perm_in)
-        # print(A_out.nnz)
         A_adj=A_out.copy()
-        # print(A_adj.nnz)
         adj = A_to_adj(A_adj)
         adjs.append(adj)
     return np.array(perms), np.array(adjs)
@@ -433,19 +431,13 @@ def A_to_adj(A):
     adj = np.zeros([N,K], np.int32)
     cur_row = rr[0]
     cur_col=0
-    max_col=0 #第一个本行为空的列索引
     for i in range(pair_num):
         if rr[i]>cur_row:
             adj[cur_row,cur_col:]=0
             cur_row=rr[i]
-            if cur_col>max_col:
-                # 第一个没有元素的索引
-                max_col=cur_col
             cur_col=0
-            # count+=1
         adj[rr[i],cur_col]=cc[i]+1
         cur_col+=1
-    adj=adj[:,:max_col] # adj.shape()[1]=max_col
     return adj
 
 

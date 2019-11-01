@@ -113,7 +113,7 @@ def save_np_data(data_path, idx_file,save_path, tasks, feat_cap,need_shufle=Fals
                  perms=np.array(task_perm[task_name]),
                  y=np.array(task_y[task_name])
                  )
-def rotate(vertices,features, num_samples ,rot_range):
+def rotate(vertices, features, num_samples, rot_range, angle_fixed):
     '''
     
     :param vertices: [num_vertices, 3]
@@ -126,7 +126,11 @@ def rotate(vertices,features, num_samples ,rot_range):
     mask=features[:,0].astype(np.bool)
     # [FEAT_CAP, 3]
     features=features[:,1:].astype(np.float32)
-    
+    if angle_fixed:
+        vertices=vertices[np.newaxis, :, :]
+        features=features[np.newaxis, :, :]
+        return vertices, features, mask
+
     random_angles_x = np.random.uniform(-rot_range[0], rot_range[0],
                                       (num_samples)).astype(np.float32)
     random_angles_y = np.random.uniform(-rot_range[1], rot_range[1],
@@ -181,10 +185,11 @@ class Data_Gen():
 
 
 class Rotate_feed():
-    def __init__(self, rot_num,rot_range, data_gen):
+    def __init__(self, rot_num,rot_range,angle_fixed, data_gen):
         self.rot_num = rot_num
         self.data_gen = data_gen
         self.rot_range=rot_range
+        self.angle_fixed=angle_fixed
         self.ref_idx = -1
         self.rot_idx = -1
         self.load_data()
@@ -206,7 +211,8 @@ class Rotate_feed():
         self.rot_vert, self.rot_feat,self.mask = rotate(
             self.data['x'][self.ref_idx],self.data['y'][self.ref_idx],
             self.rot_num,
-            self.rot_range
+            self.rot_range,
+            self.angle_fixed
         )
         input_dict = {
             'vertice': self.rot_vert, #[rot_num,pt_num,3]
@@ -232,5 +238,5 @@ if __name__=='__main__':
     # save_path='F:/ProjectData/mesh_feature/Case_npz'
     if not os.path.exists(save_path):
         os.mkdir(save_path)
-    get_idx(data_path)
+    # get_idx(data_path)
     save_np_data(data_path,'case.txt',save_path,TASKS,FEAT_CAP)

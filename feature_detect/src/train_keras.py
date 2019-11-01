@@ -32,15 +32,15 @@ data_gen = Data_Gen('F:/ProjectData/mesh_feature/Case_npz/back')
 rf = Rotate_feed(
     rot_num=2,
     rot_range=[np.pi / 18., np.pi / 18., np.pi / 18.],
-    # rot_range=[0, 0, 0],
+    angle_fixed=True,
     data_gen=data_gen
 )
 mean_metric = keras.metrics.Mean()
 
 
 # dir_load = None  # where to restore the model
-dir_load = '/20191029-2007/rutine'  # where to restore the model
-model_name = 'ckpt-39'
+dir_load = '/20191031-1620/rutine'  # where to restore the model
+model_name = 'ckpt-17'
 need_save = True
 
 # root = tf.train.Checkpoint(optimizer=optimizer,

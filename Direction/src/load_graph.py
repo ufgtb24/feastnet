@@ -1,7 +1,5 @@
-import tensorflow as tf
-
 from Direction.src.dire_data import process_data
-from Direction.src.freeze_wrapper import load_graph
+from common.freeze_wrapper import load_graph
 from Direction.src.config import *
 from Direction.src.plc import *
 

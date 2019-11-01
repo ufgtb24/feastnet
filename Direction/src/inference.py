@@ -3,7 +3,7 @@ import os
 
 from Direction.src.config import *
 from Direction.src.dire_data import process_data
-from Direction.src.freeze_wrapper import write_pb
+from common.freeze_wrapper import write_pb
 from Direction.src.plc import *
 from common.extract_model import ExtractModel
 

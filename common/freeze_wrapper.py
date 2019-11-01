@@ -1,6 +1,9 @@
-from tensorflow.python.tools import freeze_graph
-from tensorflow.python.saved_model import tag_constants
+# from tensorflow.python.tools import freeze_graph
+# from tensorflow.python.saved_model import tag_constants
 import tensorflow as tf
+from tensorflow_core.python.saved_model import tag_constants
+from tensorflow_core.python.tools import freeze_graph
+
 output_node_names = "output_node"
 input_binary = False
 input_saver_def_path = False

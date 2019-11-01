@@ -226,8 +226,8 @@ def get_idx(file_path):
             if os.path.isdir(os.path.join(file_path,file_name)):
                 f.write(file_name+'\n')
 if __name__=='__main__':
-    data_path='F:/ProjectData/mesh_feature/test/test_data'
-    save_path='F:/ProjectData/mesh_feature/test/test_npz'
+    data_path='D:/py_Project/data/test'
+    save_path='D:/py_Project/data/test_npz'
     # data_path='F:/ProjectData/mesh_feature/Case'
     # save_path='F:/ProjectData/mesh_feature/Case_npz'
     if not os.path.exists(save_path):

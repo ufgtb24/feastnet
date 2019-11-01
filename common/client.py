@@ -31,12 +31,8 @@ Typical usage example:
 
 from __future__ import print_function
 
-import base64
 import json
 
-import numpy as np
-from Direction.src.plc import *
-from Direction.src.config import *
 from Direction.src.dire_data import process_data
 
 import requests

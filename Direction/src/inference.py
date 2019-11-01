@@ -4,7 +4,7 @@ import os
 from Direction.src.config import *
 from Direction.src.dire_data import process_data
 from common.freeze_wrapper import write_pb
-from Direction.src.plc import *
+from common.plc import *
 from common.extract_model import ExtractModel
 
 tf.compat.v1.disable_eager_execution()

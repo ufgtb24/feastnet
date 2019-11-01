@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 
-def build_plc(block_num, adj_dim ,need_batch=False):
+def build_plc(block_num ,need_batch=False):
     adjs = []
     perms = []
     input_names = {}
@@ -10,10 +10,10 @@ def build_plc(block_num, adj_dim ,need_batch=False):
     input_names['vertice'] = vertice
     
     if need_batch:
-        adjs_shape=[1,None, adj_dim]
+        adjs_shape=[1,None, None]
         perms_shape=[1,None]
     else:
-        adjs_shape=[None, adj_dim]
+        adjs_shape=[None, None]
         perms_shape=[None]
 
     for i in range(block_num):

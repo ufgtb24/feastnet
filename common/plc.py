@@ -30,10 +30,11 @@ def build_plc(block_num ,need_batch=False):
 
 def build_feed_dict(plc, vertice, adjs, perms):
     '''
+    vertice [batch_size,pt_num,3]
     dict {placeholders:input array}
     '''
     feed_dict = {
-        plc['vertice']: vertice[np.newaxis, :],
+        plc['vertice']: vertice,
     }
     
     adjs_dict = {adj_plc: adjs[idx] for idx, adj_plc in enumerate(plc['adjs'])}

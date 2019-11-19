@@ -39,8 +39,8 @@ mean_metric = keras.metrics.Mean()
 
 
 # dir_load = None  # where to restore the model
-dir_load = '/20191031-1620/rutine'  # where to restore the model
-model_name = 'ckpt-17'
+dir_load = '/20191031-1754/rutine'  # where to restore the model
+model_name = 'ckpt-413'
 need_save = True
 
 # root = tf.train.Checkpoint(optimizer=optimizer,

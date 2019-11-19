@@ -24,7 +24,7 @@ plc, input_names = build_plc(BLOCK_NUM)
 model = ExtractModel(CHANNELS, coarse_level=C_LEVEL, fc_dim=4)
 load_time_dir = '20191031-1754/rutine'  # where to restore the model
 ckpt_file = 'ckpt-413'
-output = model(plc, need_sqeeze=False)
+output = model(plc)
 output = tf.identity(output, 'output_node')
 ckpt_full_dir = os.path.join(CKPT_PATH, load_time_dir)
 ckpt_full_path = os.path.join(ckpt_full_dir, ckpt_file)
@@ -92,6 +92,7 @@ elif need_infer:
     result = output[:,mask,:]  #[1,f_num,3]
     print(result)
     sess.close()
+##########
 
     # %%
     
@@ -103,25 +104,7 @@ elif need_infer:
             # 'color':0x000fff
         }
     }
-        
-        # Read all sample PLY files.
-        
-        
-        
-        # data_gen = Data_Gen(npz_path)
-        # data, npz_name, epoch_end = data_gen.load_pkg()
-        
-        # vertices=data['x'].astype(np.float32)
-        # features=data['y'].astype(np.float32)
-        #
-        # # Add batch dimension, so our data will be of shape BxNxC.
-        # points_v = vertices
-        # points_f=features[:,1:]
-        
-        # vertices = data['x'][1].astype(np.float32)
-        # features = data['y'][1].astype(np.float32)
-        
-        # Add batch dimension, so our data will be of shape BxNxC.
+    
     points_v = x
     points_f = result
     points = np.concatenate([points_v, points_f], axis=1)
